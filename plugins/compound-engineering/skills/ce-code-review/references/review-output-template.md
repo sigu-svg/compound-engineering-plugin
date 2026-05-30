@@ -13,7 +13,7 @@ Use this **exact format** when presenting synthesized review findings. Findings 
 
 **Scope:** merge-base with the review base branch -> working tree (14 files, 342 lines)
 **Intent:** Add order export endpoint with CSV and JSON format support
-**Mode:** autofix
+**Mode:** interactive
 
 **Reviewers:** correctness, testing, maintainability, security, api-contract
 - security -- new public endpoint accepts user-provided format parameter
@@ -29,14 +29,14 @@ Use this **exact format** when presenting synthesized review findings. Findings 
 
 | # | File | Issue | Reviewer | Confidence | Route |
 |---|------|-------|----------|------------|-------|
-| 2 | `export_service.rb:87` | Loads all orders into memory -- unbounded for large accounts | performance | 100 | `safe_auto -> review-fixer` |
+| 2 | `export_service.rb:87` | Loads all orders into memory -- unbounded for large accounts | performance | 100 | `gated_auto -> downstream-resolver` |
 | 3 | `export_service.rb:91` | No pagination -- response size grows linearly with order count | api-contract, performance | 75 | `manual -> downstream-resolver` |
 
 ### P2 -- Moderate
 
 | # | File | Issue | Reviewer | Confidence | Route |
 |---|------|-------|----------|------------|-------|
-| 4 | `export_service.rb:45` | Missing error handling for CSV serialization failure | correctness | 75 | `safe_auto -> review-fixer` |
+| 4 | `export_service.rb:45` | Missing error handling for CSV serialization failure | correctness | 75 | `gated_auto -> downstream-resolver` |
 
 ### P3 -- Low
 
@@ -44,16 +44,12 @@ Use this **exact format** when presenting synthesized review findings. Findings 
 |---|------|-------|----------|------------|-------|
 | 5 | `export_helper.rb:12` | Format detection could use early return instead of nested conditional | maintainability | 75 | `advisory -> human` |
 
-### Applied Fixes
+### Actionable Findings
 
-- `safe_auto`: Added bounded export pagination guard and CSV serialization failure test coverage in this run
-
-### Residual Actionable Work
-
-| # | File | Issue | Route | Next Step |
-|---|------|-------|-------|-----------|
-| 1 | `orders_controller.rb:42` | Ownership check missing on export lookup | `gated_auto -> downstream-resolver` | Defer via tracker (requires explicit approval before behavior change) |
-| 3 | `export_service.rb:91` | Pagination contract needs a broader API decision | `manual -> downstream-resolver` | Defer via tracker with contract and client impact details |
+| # | File | Issue | Route | Notes |
+|---|------|-------|-------|-------|
+| 1 | `orders_controller.rb:42` | Ownership check missing on export lookup | `gated_auto -> downstream-resolver` | `suggested_fix` present — caller decides whether to apply |
+| 3 | `export_service.rb:91` | Pagination contract needs a broader API decision | `manual -> downstream-resolver` | Needs design input before implementation |
 
 ### Pre-existing Issues
 
@@ -116,15 +112,14 @@ This fails because: no pipe-delimited tables, no severity-grouped `###` headers,
 - **Pipe-delimited markdown tables** for findings -- never ASCII box-drawing characters or per-finding horizontal-rule separators between entries (the report-level `---` before the verdict is still required)
 - **Escape literal `|` in table cells** -- any `|` inside a finding title, issue description, code snippet, regex pattern, or delimited-string example must be written as `\|`. Unescaped pipes are parsed as column separators and corrupt the row's `Reviewer`, `Confidence`, and `Route` columns. Applies especially to cache-key delimiter examples, regex alternations, and logical-OR operators quoted inside findings.
 - **Severity-grouped sections** -- `### P0 -- Critical`, `### P1 -- High`, `### P2 -- Moderate`, `### P3 -- Low`. Omit empty severity levels.
-- **Stable sequential finding numbers** -- assign finding numbers once after sorting, continue them across severity sections, and reuse those same numbers when findings are repeated in Residual Actionable Work. Do not restart at `1` for each severity or route bucket.
+- **Stable sequential finding numbers** -- assign finding numbers once after sorting, continue them across severity sections, and reuse those same numbers when findings are repeated in Actionable Findings. Do not restart at `1` for each severity or route bucket.
 - **Always include file:line location** for code review issues
 - **Reviewer column** shows which persona(s) flagged the issue. Multiple reviewers = cross-reviewer agreement.
 - **Confidence column** shows the finding's anchor as an integer (`50`, `75`, or `100`). Never render as a float.
 - **Route column** shows the synthesized handling decision as ``<autofix_class> -> <owner>``.
 - **Header includes** scope, intent, and reviewer team with per-conditional justifications
-- **Mode line** -- include `interactive`, `autofix`, `report-only`, or `headless`
-- **Applied Fixes section** -- include only when a fix phase ran in this review invocation
-- **Residual Actionable Work section** -- include only when unresolved actionable findings were handed off for later work
+- **Mode line** -- include `interactive`, `report-only`, or `agent`
+- **Actionable Findings section** -- include when the actionable queue is non-empty (findings for the caller to handle)
 - **Pre-existing section** -- separate table, no confidence column (these are informational)
 - **Learnings & Past Solutions section** -- results from ce-learnings-researcher, with links to docs/solutions/ files
 - **Agent-Native Gaps section** -- results from ce-agent-native-reviewer. Omit if no gaps found.
@@ -136,7 +131,7 @@ This fails because: no pipe-delimited tables, no severity-grouped `###` headers,
 
 ## Headless Mode Format
 
-In `mode:headless`, replace the interactive pipe-delimited table report with a structured text envelope. The headless format is defined in the `### Headless output format` section of SKILL.md. Key differences from the interactive format:
+In agent mode (`mode:agent`), replace the interactive pipe-delimited table report with a structured text envelope. The agent format is defined in the `### Agent output format` section of SKILL.md. Key differences from the interactive format:
 
 - **No pipe-delimited tables.** Findings use `[severity][autofix_class -> owner] File: <file:line> -- <title>` line format with indented Why/Evidence/Suggested fix lines.
 - **Findings grouped by autofix_class** (gated-auto, manual, advisory) instead of severity. Within each group, findings are sorted by severity.

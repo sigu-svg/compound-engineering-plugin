@@ -2,7 +2,7 @@
 
 **Scope:** merge-base with main -> working tree
 **Intent:** Demonstrate stable finding numbering
-**Mode:** autofix
+**Mode:** agent
 
 **Reviewers:** correctness, testing, maintainability
 
@@ -10,7 +10,7 @@
 
 | # | File | Issue | Reviewer | Confidence | Route |
 |---|------|-------|----------|------------|-------|
-| 1 | `export_service.rb:87` | Loads all orders into memory | performance | 100 | `safe_auto -> review-fixer` |
+| 1 | `export_service.rb:87` | Loads all orders into memory | performance | 100 | `gated_auto -> downstream-resolver` |
 | 2 | `export_service.rb:91` | Missing pagination contract | api-contract | 75 | `manual -> downstream-resolver` |
 
 ### P2 -- Moderate
@@ -19,11 +19,7 @@
 |---|------|-------|----------|------------|-------|
 | 3 | `export_service.rb:45` | Missing error handling | correctness | 75 | `gated_auto -> downstream-resolver` |
 
-### Applied Fixes
-
-- `safe_auto`: Applied bounded export loading fix for #1.
-
-### Residual Actionable Work
+### Actionable Findings
 
 | # | File | Issue | Route | Next Step |
 |---|------|-------|-------|-----------|
