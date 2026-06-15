@@ -113,9 +113,6 @@ cd "$(git rev-parse --show-toplevel)"      # return to the current checkout root
 **Why a skill instead of just `git worktree add`?**
 The value isn't the `git worktree add` command — the agent knows that. It's the *judgment*: detect that you're probably already isolated, defer to the harness's worktree tooling, and don't nest or create phantom state. That discipline is shared by `ce-work` and `ce-code-review`, so it lives in one named skill rather than being duplicated and drifting.
 
-**What happened to `.env` copying and `mise`/`direnv` trust?**
-They were removed (see #946). Worktree *dev-environment setup* is a separate concern from isolation, and a bundled script for it made the skill Claude-only and broke on other targets (#943). If you need env propagation or dev-tool trust, do it as an explicit follow-up step.
-
 **I'm already in a worktree — will it make another?**
 No. Step 0 detects existing isolation and works in place. A worktree-from-worktree is exactly the failure mode the skill prevents.
 
