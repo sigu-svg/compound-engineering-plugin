@@ -14,6 +14,10 @@ const HANDOFF_PATH = path.join(
 )
 const HANDOFF_BODY = readFileSync(HANDOFF_PATH, "utf8")
 
+const ISSUE_CREATION_START = HANDOFF_BODY.indexOf("## Issue Creation")
+const ISSUE_CREATION_SECTION =
+  ISSUE_CREATION_START > -1 ? HANDOFF_BODY.slice(ISSUE_CREATION_START) : ""
+
 // Regression guard for https://github.com/EveryInc/compound-engineering-plugin/issues/714.
 //
 // ce-plan Phase 5.4 presents a 4-option post-generation menu. Because SKILL.md
@@ -160,5 +164,60 @@ describe("ce-plan post-generation menu routing", () => {
     // the negative case isn't masking a positive-case breakage.
     const valid = "- **Start `/ce-work`** — Invoke the ce-work skill, passing the plan path."
     expect(fixedRegex.test(valid)).toBe(true)
+  })
+
+  // Regression guard for PR #961's underlying problem: Issue Creation hardcoded
+  // a `linear issue create` CLI and instructed the agent to "Read AGENTS.md /
+  // CLAUDE.md" to detect the tracker. Both are wrong — Linear has no guaranteed
+  // first-party CLI (false-negative probes caused silent local-doc fallbacks),
+  // and the project's instruction files are already in context, so naming them
+  // for a re-read is redundant, harness-brittle, and an injection smell. These
+  // assertions are behavior-focused (capability language present, bad patterns
+  // absent) rather than locking exact prose.
+  describe("Issue Creation is capability-based, not CLI/filename-coupled", () => {
+    // Shared anchor guard: a renamed/removed "## Issue Creation" heading would
+    // leave ISSUE_CREATION_SECTION empty, making the absence assertions below
+    // vacuously pass. Fail loudly here instead so the cause is obvious.
+    test("plan-handoff.md still has an '## Issue Creation' section", () => {
+      expect(
+        ISSUE_CREATION_START,
+        "plan-handoff.md is missing the '## Issue Creation' section — the other assertions in this block anchor on it.",
+      ).toBeGreaterThan(-1)
+    })
+
+    test("does not prescribe a `linear issue create` CLI", () => {
+      expect(
+        HANDOFF_BODY.includes("linear issue create"),
+        "references/plan-handoff.md must not prescribe `linear issue create`; Linear has no guaranteed first-party CLI. Route through whatever interface Linear exposes (connector/MCP, documented API/GraphQL, or a documented CLI).",
+      ).toBe(false)
+    })
+
+    test("names the accepted Linear access surfaces and guards the false-negative probe", () => {
+      expect(
+        /connector|MCP/i.test(ISSUE_CREATION_SECTION) && /API|GraphQL/i.test(ISSUE_CREATION_SECTION),
+        "Issue Creation must name capability-based Linear access surfaces (connector/MCP and documented API/GraphQL), not a single hardcoded CLI.",
+      ).toBe(true)
+
+      expect(
+        /do not (?:assume|treat|infer)[\s\S]{0,200}(?:missing|no )[\s\S]{0,120}(?:binary|MCP|env|unavailable)/i.test(ISSUE_CREATION_SECTION),
+        "Issue Creation must guard against the false-negative probe: a missing binary / env var / MCP server is not proof the tracker is unavailable.",
+      ).toBe(true)
+    })
+
+    test("tracker detection reads from context, not by re-opening named instruction files", () => {
+      // The detection step must not instruct re-reading a named root instruction
+      // file (the old "Read `AGENTS.md` (or `CLAUDE.md` ...)" probe). It should
+      // reference the project instructions already in context instead. Naming
+      // AGENTS.md is still allowed on the WRITE path (persisting project_tracker).
+      expect(
+        /Read `?AGENTS\.md`?\s*\(or\s*`?CLAUDE\.md`?/i.test(ISSUE_CREATION_SECTION),
+        'Issue Creation tracker detection must not instruct "Read AGENTS.md (or CLAUDE.md ...)"; reference the project instructions already in context. Naming a file is reserved for the write-back path.',
+      ).toBe(false)
+
+      expect(
+        /already in your context|active instructions/i.test(ISSUE_CREATION_SECTION),
+        "Issue Creation tracker detection must point at the project instructions already in the agent's context rather than a file to open.",
+      ).toBe(true)
+    })
   })
 })
