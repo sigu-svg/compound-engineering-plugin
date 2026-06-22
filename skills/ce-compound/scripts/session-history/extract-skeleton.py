@@ -290,6 +290,18 @@ def handle_pi(obj):
     role = msg.get("role", "")
     content = msg.get("content", [])
 
+    if role == "bashExecution":
+        exit_code = msg.get("exitCode")
+        if msg.get("cancelled"):
+            status = "cancelled"
+        elif exit_code in (None, 0):
+            status = "ok"
+        else:
+            status = f"error(exit {exit_code})"
+        command = _safe_slice(msg.get("command"), 120)
+        pending_tools.append({"ts": ts, "name": "bash", "target": command, "status": status})
+        return
+
     if role == "user":
         text = clean_text(" ".join(_pi_text_content(content)))
         if len(text) > 15:

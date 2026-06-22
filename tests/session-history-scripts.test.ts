@@ -517,6 +517,59 @@ describe("extract-skeleton", () => {
     expect(stdout).not.toContain("file contents here")
   })
 
+  test("extracts Pi bashExecution commands", async () => {
+    const lines = [
+      JSON.stringify({
+        type: "session",
+        version: 3,
+        id: "test-pi-bash-session",
+        timestamp: "2026-04-07T09:00:00.000Z",
+        cwd: "/Users/test/Code/my-repo",
+      }),
+      JSON.stringify({
+        type: "message",
+        id: "bash1",
+        parentId: null,
+        timestamp: "2026-04-07T09:02:00.000Z",
+        message: {
+          role: "bashExecution",
+          command: "bun test tests/session-history-scripts.test.ts",
+          output: "56 pass\n0 fail",
+          exitCode: 0,
+          cancelled: false,
+          truncated: false,
+          timestamp: 1775542920000,
+        },
+      }),
+      JSON.stringify({
+        type: "message",
+        id: "bash2",
+        parentId: "bash1",
+        timestamp: "2026-04-07T09:03:00.000Z",
+        message: {
+          role: "bashExecution",
+          command: "bun test tests/missing.test.ts",
+          output: "1 test failed",
+          exitCode: 1,
+          cancelled: false,
+          truncated: false,
+          timestamp: 1775542980000,
+        },
+      }),
+    ]
+    const { stdout, exitCode } = await runScript(
+      "extract-skeleton.py",
+      [],
+      lines.join("\n")
+    )
+    expect(exitCode).toBe(0)
+    expect(stdout).toContain("[tool] bash bun test tests/session-history-scripts.test.ts -> ok")
+    expect(stdout).toContain("[tool] bash bun test tests/missing.test.ts -> error(exit 1)")
+    const meta = JSON.parse(stdout.trim().split("\n").at(-1)!)
+    expect(meta.tool).toBe(2)
+    expect(meta.parse_errors).toBe(0)
+  })
+
   test("outputs _meta with stats", async () => {
     const fixture = await Bun.file(
       path.join(FIXTURES_DIR, "claude-session.jsonl")
