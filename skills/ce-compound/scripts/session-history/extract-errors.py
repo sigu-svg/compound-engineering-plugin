@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract error signals from a Claude Code, Codex, or Cursor JSONL session file.
+"""Extract error signals from a Claude Code, Codex, Cursor, or Pi JSONL session file.
 
 Usage:
   cat <session.jsonl> | python3 extract-errors.py
@@ -88,6 +88,43 @@ def handle_codex(obj):
                 stats["errors_found"] += 1
 
 
+def _pi_content_summary(content):
+    if isinstance(content, str):
+        return summarize_error(content)
+    if isinstance(content, list):
+        text = "\n".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") in ("text", "toolError")
+        )
+        return summarize_error(text)
+    return summarize_error(content)
+
+
+def handle_pi(obj):
+    if obj.get("type") != "message":
+        return
+    msg = obj.get("message", {})
+    if msg.get("role") != "toolResult":
+        return
+    content = msg.get("content", [])
+    is_error = bool(msg.get("isError"))
+    if isinstance(content, list):
+        is_error = is_error or any(
+            isinstance(block, dict) and block.get("type") == "toolError"
+            for block in content
+        )
+    if not is_error:
+        return
+
+    ts = obj.get("timestamp", "")[:19]
+    tool = msg.get("toolName", "unknown")
+    summary = _pi_content_summary(content)
+    print(f"[{ts}] [error] tool={tool}: {summary}")
+    print("---")
+    stats["errors_found"] += 1
+
+
 # Auto-detect platform from first few lines, then process all
 detected = None
 buffer = []
@@ -102,7 +139,9 @@ for line in sys.stdin:
     if not detected and len(buffer) <= 10:
         try:
             obj = json.loads(line)
-            if obj.get("type") in ("user", "assistant"):
+            if obj.get("type") == "session" and "cwd" in obj:
+                detected = "pi"
+            elif obj.get("type") in ("user", "assistant"):
                 detected = "claude"
             elif obj.get("type") in ("session_meta", "turn_context", "response_item", "event_msg"):
                 detected = "codex"
@@ -115,7 +154,7 @@ for line in sys.stdin:
 def handle_noop(obj):
     pass
 
-handlers = {"claude": handle_claude, "codex": handle_codex, "cursor": handle_noop}
+handlers = {"claude": handle_claude, "codex": handle_codex, "cursor": handle_noop, "pi": handle_pi}
 handler = handlers.get(detected, handle_noop)
 
 for line in buffer:

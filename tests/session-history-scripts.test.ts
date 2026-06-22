@@ -26,6 +26,12 @@ async function runScript(
   return { stdout, stderr, exitCode }
 }
 
+async function writeFixture(targetPath: string, fixtureName: string): Promise<void> {
+  await fs.promises.mkdir(path.dirname(targetPath), { recursive: true })
+  const fixture = await Bun.file(path.join(FIXTURES_DIR, fixtureName)).text()
+  await fs.promises.writeFile(targetPath, fixture)
+}
+
 function parseJsonLines(output: string): any[] {
   return output
     .trim()
@@ -74,21 +80,37 @@ describe("extract-metadata", () => {
     expect(session.platform).toBe("cursor")
   })
 
+  test("detects Pi platform and extracts CWD", async () => {
+    const { stdout, exitCode } = await runScript("extract-metadata.py", [
+      path.join(FIXTURES_DIR, "pi-session.jsonl"),
+    ])
+    expect(exitCode).toBe(0)
+    const lines = parseJsonLines(stdout)
+    const session = lines.find((l) => !l._meta)
+    expect(session.platform).toBe("pi")
+    expect(session.cwd).toBe("/Users/test/Code/my-repo")
+    expect(session.session).toBe("test-pi-session-1")
+    expect(session.ts).toContain("2026-04-07")
+    expect(session.last_ts).toContain("2026-04-07T09:01:20")
+  })
+
   test("batch mode processes multiple files", async () => {
     const { stdout, exitCode } = await runScript("extract-metadata.py", [
       path.join(FIXTURES_DIR, "claude-session.jsonl"),
       path.join(FIXTURES_DIR, "codex-session.jsonl"),
       path.join(FIXTURES_DIR, "cursor-session.jsonl"),
+      path.join(FIXTURES_DIR, "pi-session.jsonl"),
     ])
     expect(exitCode).toBe(0)
     const lines = parseJsonLines(stdout)
     const meta = lines.find((l) => l._meta)
-    expect(meta.files_processed).toBe(3)
+    expect(meta.files_processed).toBe(4)
     expect(meta.parse_errors).toBe(0)
     const platforms = lines.filter((l) => !l._meta).map((l) => l.platform)
     expect(platforms).toContain("claude")
     expect(platforms).toContain("codex")
     expect(platforms).toContain("cursor")
+    expect(platforms).toContain("pi")
   })
 
   test("--cwd-filter excludes non-matching Codex sessions", async () => {
@@ -110,6 +132,19 @@ describe("extract-metadata", () => {
       "--cwd-filter",
       "my-repo",
       path.join(FIXTURES_DIR, "codex-session.jsonl"),
+    ])
+    expect(exitCode).toBe(0)
+    const lines = parseJsonLines(stdout)
+    const sessions = lines.filter((l) => !l._meta)
+    expect(sessions.length).toBe(1)
+    expect(sessions[0].cwd).toContain("my-repo")
+  })
+
+  test("--cwd-filter keeps matching Pi sessions", async () => {
+    const { stdout, exitCode } = await runScript("extract-metadata.py", [
+      "--cwd-filter",
+      "my-repo",
+      path.join(FIXTURES_DIR, "pi-session.jsonl"),
     ])
     expect(exitCode).toBe(0)
     const lines = parseJsonLines(stdout)
@@ -142,12 +177,13 @@ describe("extract-metadata", () => {
         path.join(FIXTURES_DIR, "claude-session.jsonl"),
         path.join(FIXTURES_DIR, "codex-session.jsonl"),
         path.join(FIXTURES_DIR, "cursor-session.jsonl"),
+        path.join(FIXTURES_DIR, "pi-session.jsonl"),
       ])
       expect(exitCode).toBe(0)
       const lines = parseJsonLines(stdout)
       const sessions = lines.filter((l) => !l._meta)
-      // All three fixtures mention middleware.
-      expect(sessions.length).toBe(3)
+      // All four fixtures mention middleware.
+      expect(sessions.length).toBe(4)
       for (const session of sessions) {
         expect(session.match_count).toBeGreaterThan(0)
         expect(session.keyword_matches.middleware).toBeGreaterThan(0)
@@ -337,6 +373,19 @@ describe("extract-metadata", () => {
       expect(sessions.length).toBe(1)
       expect(sessions[0].keyword_matches.auth).toBeGreaterThan(0)
     })
+
+    test("matches Pi string-form user content", async () => {
+      const { stdout, exitCode } = await runScript("extract-metadata.py", [
+        "--keyword",
+        "expiry",
+        path.join(FIXTURES_DIR, "pi-session.jsonl"),
+      ])
+      expect(exitCode).toBe(0)
+      const lines = parseJsonLines(stdout)
+      const sessions = lines.filter((l) => !l._meta)
+      expect(sessions.length).toBe(1)
+      expect(sessions[0].keyword_matches.expiry).toBeGreaterThan(0)
+    })
   })
 })
 
@@ -446,6 +495,26 @@ describe("extract-skeleton", () => {
     for (const line of assistantLines) {
       expect(line).not.toMatch(/\[assistant\]\s*\[REDACTED\]$/)
     }
+  })
+
+  test("extracts Pi user, assistant, and tool messages", async () => {
+    const fixture = await Bun.file(
+      path.join(FIXTURES_DIR, "pi-session.jsonl")
+    ).text()
+    const { stdout, exitCode } = await runScript(
+      "extract-skeleton.py",
+      [],
+      fixture
+    )
+    expect(exitCode).toBe(0)
+    expect(stdout).toContain("[user] fix the auth bug in middleware")
+    expect(stdout).toContain("[assistant] Let me look at the auth middleware.")
+    expect(stdout).toContain("[assistant] Found the issue.")
+    expect(stdout).toContain("[user] also add a regression test for the expiry check")
+    expect(stdout).toContain("[tool] read /Users/test/Code/my-repo/src/auth.ts -> ok")
+    expect(stdout).toContain("[tool] edit /Users/test/Code/my-repo/src/auth.ts -> error")
+    expect(stdout).not.toContain("internal reasoning should not be extracted")
+    expect(stdout).not.toContain("file contents here")
   })
 
   test("outputs _meta with stats", async () => {
@@ -713,6 +782,23 @@ describe("extract-errors", () => {
     expect(meta.errors_found).toBe(0)
   })
 
+  test("extracts Pi tool result errors", async () => {
+    const fixture = await Bun.file(
+      path.join(FIXTURES_DIR, "pi-session.jsonl")
+    ).text()
+    const { stdout, exitCode } = await runScript(
+      "extract-errors.py",
+      [],
+      fixture
+    )
+    expect(exitCode).toBe(0)
+    expect(stdout).toContain("[error] tool=edit: String to replace not found")
+    const lines = stdout.trim().split("\n")
+    const meta = JSON.parse(lines[lines.length - 1])
+    expect(meta.errors_found).toBe(1)
+    expect(meta.parse_errors).toBe(0)
+  })
+
   test("outputs _meta with error count", async () => {
     const fixture = await Bun.file(
       path.join(FIXTURES_DIR, "claude-session.jsonl")
@@ -821,9 +907,9 @@ describe("--output PATH mode", () => {
 // Cross-platform auto-detection
 // ---------------------------------------------------------------------------
 describe("auto-detection", () => {
-  test("all three scripts detect the correct platform", async () => {
-    const fixtures = ["claude-session", "codex-session", "cursor-session"]
-    const expected = ["claude", "codex", "cursor"]
+  test("all supported platforms are auto-detected", async () => {
+    const fixtures = ["claude-session", "codex-session", "cursor-session", "pi-session"]
+    const expected = ["claude", "codex", "cursor", "pi"]
 
     for (let i = 0; i < fixtures.length; i++) {
       const fixturePath = path.join(FIXTURES_DIR, `${fixtures[i]}.jsonl`)
@@ -852,10 +938,12 @@ describe("auto-detection", () => {
 // ---------------------------------------------------------------------------
 describe("discover-sessions", () => {
   async function runDiscover(
-    ...args: string[]
+    args: string[],
+    env: Record<string, string> = {}
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const scriptPath = path.join(SCRIPTS_DIR, "discover-sessions.sh")
     const proc = Bun.spawn(["bash", scriptPath, ...args], {
+      env: { ...process.env, ...env },
       stdout: "pipe",
       stderr: "pipe",
     })
@@ -867,10 +955,7 @@ describe("discover-sessions", () => {
 
   test("returns zero files for nonexistent repo without error", async () => {
     const { stdout, stderr, exitCode } = await runDiscover(
-      "nonexistent-repo-xyz",
-      "7",
-      "--platform",
-      "claude"
+      ["nonexistent-repo-xyz", "7", "--platform", "claude"]
     )
     expect(exitCode).toBe(0)
     expect(stderr).toBe("")
@@ -880,10 +965,7 @@ describe("discover-sessions", () => {
 
   test("returns zero files for nonexistent repo on cursor", async () => {
     const { stdout, stderr, exitCode } = await runDiscover(
-      "nonexistent-repo-xyz",
-      "7",
-      "--platform",
-      "cursor"
+      ["nonexistent-repo-xyz", "7", "--platform", "cursor"]
     )
     expect(exitCode).toBe(0)
     expect(stderr).toBe("")
@@ -893,8 +975,7 @@ describe("discover-sessions", () => {
 
   test("all output lines are .jsonl files", async () => {
     const { stdout, exitCode } = await runDiscover(
-      "compound-engineering-plugin",
-      "7"
+      ["compound-engineering-plugin", "7"]
     )
     expect(exitCode).toBe(0)
     const files = stdout.trim().split("\n").filter((l) => l.trim())
@@ -907,10 +988,7 @@ describe("discover-sessions", () => {
 
   test("--platform claude restricts to claude dirs only", async () => {
     const { stdout } = await runDiscover(
-      "compound-engineering-plugin",
-      "7",
-      "--platform",
-      "claude"
+      ["compound-engineering-plugin", "7", "--platform", "claude"]
     )
     const files = stdout.trim().split("\n").filter((l) => l.trim())
     for (const file of files) {
@@ -920,10 +998,7 @@ describe("discover-sessions", () => {
 
   test("--platform codex restricts to codex dirs only", async () => {
     const { stdout } = await runDiscover(
-      "compound-engineering-plugin",
-      "7",
-      "--platform",
-      "codex"
+      ["compound-engineering-plugin", "7", "--platform", "codex"]
     )
     const files = stdout.trim().split("\n").filter((l) => l.trim())
     for (const file of files) {
@@ -933,12 +1008,28 @@ describe("discover-sessions", () => {
 
   test("fails on unknown platform", async () => {
     const { exitCode, stderr } = await runDiscover(
-      "compound-engineering-plugin",
-      "7",
-      "--platform",
-      "windsurf"
+      ["compound-engineering-plugin", "7", "--platform", "windsurf"]
     )
     expect(exitCode).toBe(1)
     expect(stderr).toContain("Unknown platform")
+  })
+
+  test("--platform pi discovers sessions under encoded CWD directories", async () => {
+    const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), "pi-home-"))
+    const sessionPath = path.join(
+      tempHome,
+      ".pi/agent/sessions/--Users-test-Code-my-repo--/2026-04-07T09-00-00-000Z_test.jsonl"
+    )
+    await writeFixture(sessionPath, "pi-session.jsonl")
+
+    const { stdout, stderr, exitCode } = await runDiscover(
+      ["my-repo", "7", "--platform", "pi"],
+      { HOME: tempHome }
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr).toBe("")
+    const files = stdout.trim().split("\n").filter((l) => l.trim())
+    expect(files).toEqual([sessionPath])
   })
 })

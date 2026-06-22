@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Discover session files across Claude Code, Codex, and Cursor.
+# Discover session files across Claude Code, Codex, Cursor, and Pi.
 #
-# Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor]
+# Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor|pi]
 #
 # Outputs one file path per line. Safe in both bash and zsh (all globs guarded).
 # Pass output to extract-metadata.py:
@@ -14,8 +14,8 @@
 
 set -euo pipefail
 
-REPO_NAME="${1:?Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor]}"
-DAYS="${2:?Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor]}"
+REPO_NAME="${1:?Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor|pi]}"
+DAYS="${2:?Usage: discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor|pi]}"
 PLATFORM="${4:-all}"
 
 # Parse optional --platform flag
@@ -64,15 +64,31 @@ discover_cursor() {
     done
 }
 
+# --- Pi ---
+discover_pi() {
+    local base="$HOME/.pi/agent/sessions"
+    [ -d "$base" ] || return 0
+
+    # Pi stores sessions under --<absolute-cwd-with-slashes-as-hyphens>--.
+    # Matching by repo name keeps discovery cheap; extract-metadata.py applies
+    # the precise cwd filter before keyword scanning.
+    for dir in "$base"/*"$REPO_NAME"*/; do
+        [ -d "$dir" ] || continue
+        find "$dir" -maxdepth 1 -name "*.jsonl" -mtime "-${DAYS}" 2>/dev/null
+    done
+}
+
 # --- Dispatch ---
 case "$PLATFORM" in
     claude)  discover_claude ;;
     codex)   discover_codex ;;
     cursor)  discover_cursor ;;
+    pi)      discover_pi ;;
     all)
         discover_claude
         discover_codex
         discover_cursor
+        discover_pi
         ;;
     *)
         echo "Unknown platform: $PLATFORM" >&2
