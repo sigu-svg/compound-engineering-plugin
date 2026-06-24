@@ -1,6 +1,6 @@
 ---
 name: ce-dogfood-beta
-description: "[BETA] Dogfood the active branch end-to-end as a QA engineer. Diffs the branch against main, builds an exhaustive browser test matrix of every change (full user journeys, not just features), drives the app with agent-browser, then auto-fixes issues, adds regression tests, and commits each fix until the matrix is green. Use when you want a hands-off 'test everything we just built and make it actually work' pass before shipping."
+description: "[BETA] Hands-off end-to-end branch dogfood pass with browser testing, auto-fixes, regression tests, and fix commits."
 disable-model-invocation: true
 argument-hint: "[PR number, branch name, or blank for current branch] [--port PORT]"
 ---

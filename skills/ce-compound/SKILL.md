@@ -1,6 +1,6 @@
 ---
 name: ce-compound
-description: Document a recently solved problem to compound your team's knowledge or CONCEPTS.md, the project's shared domain vocabulary.
+description: Document a recently solved problem or durable project vocabulary in docs/solutions/ or CONCEPTS.md. Use when capturing a learning after work.
 argument-hint: "[optional: brief context] [mode:headless] "
 ---
 

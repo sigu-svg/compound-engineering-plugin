@@ -1,6 +1,6 @@
 ---
 name: ce-riffrec-feedback-analysis
-description: Riffrec product-feedback workflow. ALWAYS load when the user posts a `riffrec-*.zip`, a bundle with `session.json` + `events.json` + `recording.webm` + `voice.webm`, a video/audio recording for product feedback, or asks how to capture and share Riffrec sessions. Routes between setup, quick bug report, and extensive analysis.
+description: Analyze Riffrec feedback captures. Always load for `riffrec-*.zip`, `session.json` + `events.json` + `recording.webm` + `voice.webm` bundles, or requests to capture/share Riffrec sessions.
 ---
 
 # Riffrec Feedback Analysis
