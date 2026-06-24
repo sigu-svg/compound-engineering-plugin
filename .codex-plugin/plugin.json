@@ -33,9 +33,8 @@
     "privacyPolicyURL": "https://every.to/legal",
     "termsOfServiceURL": "https://every.to/legal",
     "defaultPrompt": [
-      "/ce-brainstorm a new feature",
-      "/ce-plan the implementation",
-      "/ce-code-review my changes"
+      "Brainstorm a new feature with me",
+      "Ideate and surprise me!"
     ],
     "brandColor": "#C9EFFA",
     "composerIcon": "./assets/icon.svg",
