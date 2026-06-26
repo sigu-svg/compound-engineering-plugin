@@ -70,6 +70,7 @@ const EXTRA_LEGACY_ARTIFACTS_BY_PLUGIN: Record<string, LegacyPluginArtifacts> = 
       "ce-session-extract",
       "ce-session-inventory",
       "ce-update",
+      "ce-work-beta",
       "changelog",
       "claude-permissions-optimizer",
       "compound-docs",

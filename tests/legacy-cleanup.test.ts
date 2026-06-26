@@ -621,10 +621,10 @@ describe("cleanupStalePrompts", () => {
       ),
     )
     await createFile(
-      path.join(root, "ce-work-beta.md"),
+      path.join(root, "ce-work.md"),
       legacyWorkflowPromptContent(
-        "ce:work-beta",
-        (await pluginDescription("skills/ce-work-beta/SKILL.md"))
+        "ce:work",
+        (await pluginDescription("skills/ce-work/SKILL.md"))
           .replaceAll("ce-", "ce:"),
       ),
     )
@@ -633,7 +633,7 @@ describe("cleanupStalePrompts", () => {
 
     expect(removed).toBe(2)
     expect(await exists(path.join(root, "ce-plan.md"))).toBe(false)
-    expect(await exists(path.join(root, "ce-work-beta.md"))).toBe(false)
+    expect(await exists(path.join(root, "ce-work.md"))).toBe(false)
   })
 
   test("removes wrappers whose description has drifted (matches a known historical alias)", async () => {
