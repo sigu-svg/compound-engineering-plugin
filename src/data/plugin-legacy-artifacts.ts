@@ -254,6 +254,7 @@ const EXTRA_LEGACY_ARTIFACTS_BY_PLUGIN: Record<string, LegacyPluginArtifacts> = 
       "ce:plan",
       "ce:review",
       "ce:work",
+      "ce:work-beta",
       "changelog",
       "codify",
       "compound",
