@@ -90,7 +90,7 @@ fi
 # $OUT after Stage 5 skipped it. claude keeps the (g)timeout wrapper: it is single-shot
 # and gtimeout's own timeout (with -k) escalates to KILL correctly; perl(alarm) is the
 # fallback when neither (g)timeout exists.
-IDLE_SECS="${CROSS_MODEL_IDLE_SECS:-120}"   # kill codex if its streamed output stalls this long
+IDLE_SECS="${CROSS_MODEL_IDLE_SECS:-180}"   # reap codex if its streamed output stalls this long
 HARD_SECS="${CROSS_MODEL_HARD_SECS:-600}"   # absolute ceiling (backstop) for either peer
 TO_BIN="$(command -v gtimeout || command -v timeout || true)"
 
@@ -115,8 +115,12 @@ reap() {
 run_codex() {
   local prev; case "$-" in *m*) prev=1;; *) prev=0;; esac
   set -m   # background job becomes a process-group leader (pgid == pid) so reap() kills the tree
+  # Force reasoning output on for THIS subprocess (overriding a user's hide_agent_reasoning
+  # = true), so the streamed reasoning keeps PEERLOG growing and gives the idle watchdog a
+  # liveness signal -- otherwise a long, quiet reasoning phase on a big diff could be
+  # misread as a stall and reaped.
   codex exec - -C "$REPO_ROOT" -s read-only -o "$OUT" \
-    -c 'model_reasoning_effort="high"' < "$PROMPT_FILE" > "$PEERLOG" 2>&1 &
+    -c 'model_reasoning_effort="high"' -c 'hide_agent_reasoning=false' < "$PROMPT_FILE" > "$PEERLOG" 2>&1 &
   local pid=$!
   [ "$prev" = 0 ] && set +m   # group is already assigned; restoring silences job-control noise
   local start last=-1 lastchg now size
