@@ -69,8 +69,8 @@ echo "XPEER_MODE: $XMODE"
 
 ## Step 3 — Announce (only on an interactive host — `claude` or `cursor` — AND default mode)
 
-- `XHOST` is `claude` or `cursor`, default mode, `XMODE=ready`: print one line — `Cross-model adversarial pass: running via <peer>.`
-- `XHOST` is `claude` or `cursor`, default mode, `XMODE` not ready: print one subtle line — `Cross-model adversarial pass skipped (<peer> not available).` Never phrase it as an error.
+- `XHOST` is `claude` or `cursor`, default mode, `XMODE=ready`: surface a **prominent standalone line that names the peer** running the pass (the peer CLI, plus its model if cheaply known), framed as an independent second model reviewing in parallel — placed with the Stage 3 team announce, not buried after it. Wording is yours; the requirements are falsifiable: it is prominent, it names the peer, and it reads as coverage rather than plumbing.
+- `XHOST` is `claude` or `cursor`, default mode, `XMODE` not ready: one quiet line that the cross-model pass was skipped and why (e.g. the peer isn't installed/authed). Never phrase it as an error.
 - `XHOST=codex`: announce **nothing** — run or skip silently.
 - `mode:agent`: emit no prose in any case.
 

@@ -52,6 +52,7 @@ Same pipeline for default and `mode:agent`:
 - **No blocking prompts.** Never use `AskUserQuestion`, `request_user_input`, `ask_user`, or other blocking question tools. Infer intent, plan, and scope from explicit tokens, git state, PR metadata, and conversation. Note uncertainty in Coverage or the verdict — do not stop to ask.
 - **Explicit mutations only.** Never run `gh pr checkout`, `git checkout`, `git switch`, or similar branch-switch commands. Passing a PR number, URL, or branch name selects **review scope**, not permission to mutate the working tree. To review local uncommitted work on a feature branch, check out that branch yourself (or stay on it) and pass `base:` or no target.
 - **Smart defaults.** Untracked files: review tracked changes only and list excluded paths in Coverage. Plan: use `plan:` when passed; otherwise discover conservatively from PR body or branch keywords. Weak advisory P2/P3 from testing/maintainability alone: demote to `testing_gaps` / `residual_risks` per Stage 5.
+- **Report outcomes, not machinery.** What you show the user is about the review: what's being examined (the PR/branch), which coverage is included and the one-line reason for each conditional lens, the independent cross-model pass and which model runs it, and the findings. Keep the skill's internals out of user-facing text — model-tier assignments, raw scope-mode codenames (`local-aligned`/`pr-remote`), staging the diff to disk, loading persona files, parallel-dispatch bookkeeping, and step-by-step narration of your own setup. Name what the user would recognize (a PR number, a reviewer's concern, a peer model), not the plumbing. This governs *what* you surface and suppress; it does not script the wording — use your own voice.
 
 ## Output format
 
@@ -306,23 +307,22 @@ Stack-specific personas are additive when runtime behavior warrants them. A Hotw
 
 For `deployment-verification-agent`, use the same migration-artifact gate when the change is risky (destructive DDL, backfills, NOT NULL without default, column renames/drops).
 
-Announce the team before spawning. Tag each reviewer with its model tier (`[session model]` or `[mid-tier]`) — this annotation is the authoritative input Stage 4 reads to apply the dispatch-time override, so it must be present and accurate before any agent is dispatched:
+Announce the team before spawning, as a user-facing summary: name the always-on reviewers plainly, and for each conditional reviewer give the one-line reason it was added (the real concern, not the keyword that matched). Do **not** put model-tier labels (`[session model]`/`[mid-tier]`) or scope-mode codenames in this announce — those are internal; Stage 4 assigns models from the fixed rule below and does not read them back from this text.
+
+If the cross-model adversarial pass will run (adversarial selected + `local-aligned`/standalone scope), resolve its peer now via the cross-model reference's host/preflight steps and surface it **as its own prominent line that names the peer** (the peer CLI, plus its model if cheaply known) — the headline is that a second, genuinely independent model is also reviewing. Keep it with the team, not buried after it, and honor that reference's host gating (interactive hosts only). If it won't run, omit it.
+
+Illustrative shape only — match your own voice, do not copy verbatim:
 
 ```
-Review team:
-- correctness (always) [session model]
-- testing (always) [mid-tier]
-- maintainability (always) [mid-tier]
-- project-standards (always) [mid-tier]
-- agent-native-reviewer (always) [mid-tier]
-- learnings-researcher (always) [mid-tier]
-- security -- new endpoint in routes.rb accepts user-provided redirect URL [session model]
-- julik-frontend-races -- Stimulus controller with async DOM updates [mid-tier]
-- data-migration -- adds migration 20260303_add_index_to_orders [mid-tier]
-- deployment-verification-agent -- destructive migration with backfill [mid-tier]
-```
+Reviewing PR #1234 (against main)
 
-Tag `[session model]` only for `correctness-reviewer`, `security-reviewer`, and `adversarial-reviewer`; every other persona and CE agent gets `[mid-tier]` (see Model tiering below for the rationale).
+Also running an independent adversarial pass via a different model: Codex.
+
+Reviewers:
+- correctness, testing, maintainability, project-standards, agent-native, learnings (always)
+- security — new endpoint accepts a user-provided redirect URL
+- data-migration — adds migration 20260303_add_index_to_orders
+```
 
 This is progress reporting, not a blocking confirmation.
 
@@ -362,12 +362,12 @@ Pass `{run_id}` to every persona sub-agent so they can write their full analysis
 
 Omit the `mode` parameter when dispatching sub-agents so the user's configured permission settings apply. Do not pass `mode: "auto"`.
 
-**Model override at dispatch time — check this before every dispatch call.** Omitting it on a top-tier parent session (e.g. Opus) silently multiplies review cost. For each reviewer, read the `[session model]` / `[mid-tier]` tag from the Stage 3 team announce and apply it — do not re-derive the tier from the rules at dispatch time:
+**Model override at dispatch time — check this before every dispatch call.** Omitting it on a top-tier parent session (e.g. Opus) silently multiplies review cost. The tier is a deterministic function of the persona, so derive and apply it at dispatch (it is internal — not shown in the Stage 3 announce):
 
-- `[session model]` → no override; the reviewer inherits the session model. This covers `correctness-reviewer`, `security-reviewer`, and `adversarial-reviewer`.
-- `[mid-tier]` → pass the platform's mid-tier model. In Claude Code, that is the Sonnet class. In Codex, use the current mini/mid-tier model exposed by `spawn_agent` when known. On platforms where the dispatch primitive has no model-override parameter or the available model names are unknown, omit the override — a working review on the parent model beats a broken dispatch on an unrecognized name.
+- **Session model** (no override; inherits the session model) — `correctness-reviewer`, `security-reviewer`, and `adversarial-reviewer` only.
+- **Mid-tier** — every other persona and CE agent: pass the platform's mid-tier model. In Claude Code, that is the Sonnet class. In Codex, use the current mini/mid-tier model exposed by `spawn_agent` when known. On platforms where the dispatch primitive has no model-override parameter or the available model names are unknown, omit the override — a working review on the parent model beats a broken dispatch on an unrecognized name.
 
-The Stage 3 annotation is the single source of truth for model assignment; apply it on every Agent / `spawn_agent` / subagent call in the parallel dispatch.
+Apply this rule on every Agent / `spawn_agent` / subagent call in the parallel dispatch.
 
 **Bounded parallel dispatch.** Respect the current harness's active-subagent limit. Queue selected reviewers, dispatch only as many as the harness accepts, and fill freed slots as reviewers complete. Treat active-agent/thread/concurrency-limit spawn errors as backpressure, not reviewer failure: leave the reviewer queued and retry after a slot frees. Record a reviewer as failed only after a successful dispatch times out/fails, or when dispatch fails for a non-capacity reason.
 
