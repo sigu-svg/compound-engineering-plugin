@@ -18,23 +18,31 @@ describe("ce-work review contract", () => {
     expect(content).not.toContain("Code Review** (Optional)")
 
     // Phase 3 has a conditional Simplify step at position 2 (ce-simplify-code, gated on >=30 LOC)
-    // and code review at position 3 (Tier 1 when available; Tier 2 on criteria only)
+    // and code review at position 3.
     expect(shipping).toContain("2. **Simplify**")
     expect(shipping).toContain("ce-simplify-code")
     expect(shipping).toContain("3. **Code Review**")
 
-    // Two-tier rubric in reference file: Tier 1 when harness has built-in review,
-    // Tier 2 is ce-code-review (risk-based escalation only — not when Tier 1 missing)
-    expect(shipping).toContain("**Tier 1 -- harness-native review")
-    expect(shipping).toContain("**Tier 2 -- `ce-code-review` (escalation only).**")
-    expect(shipping).toContain("not** because Tier 1 is missing")
+    // Single portable path: ce-code-review self-sizes (lite vs full roster).
+    // The former Tier 1 (harness-native /review) / Tier 2 (escalation) split is gone,
+    // along with harness-specific review detection.
     expect(shipping).toContain("ce-code-review")
+    expect(shipping).toContain("as the single path")
+    expect(shipping).not.toContain("**Tier 1 -- harness-native review")
+    expect(shipping).not.toContain("(escalation only)")
+    // Skip only for a purely mechanical diff; everything else is reviewed
+    expect(shipping).toContain("mechanical diff")
+    // The one escalation signal ce-code-review cannot infer is passed explicitly
+    expect(shipping).toContain("depth:full")
+    // Autonomous Residual Gate branch keeps unattended pipelines unblocked
+    expect(shipping).toContain("Non-interactive / autonomous")
+    // Two-step review -> fix, consumed by followup
     expect(shipping).toContain("review-findings-followup.md")
-    expect(shipping).toMatch(/review is not fix|2a\. Review|2b\. Apply/i)
+    expect(shipping).toMatch(/review is not fix|3a\. Review|3b\. Apply/i)
     expect(shipping).toContain("mode:agent")
 
-    // Quality checklist includes review
-    expect(shipping).toContain("Code review: Tier 1 completed, or Tier 2 when escalated")
+    // Quality checklist references ce-code-review (self-sized), not tiers
+    expect(shipping).toContain("Code review: `ce-code-review` ran")
   })
 
   test("delegates commit and PR to dedicated skills", async () => {
