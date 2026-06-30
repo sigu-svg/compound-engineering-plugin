@@ -1,6 +1,6 @@
 ---
 name: ce-pov
-description: "Give a decisive, project-grounded verdict on an external input — judged against the current project, not in the abstract. Use to decide whether to adopt, switch to, or revisit a technology, library, pattern, platform, or architecture, or for a mid-session second opinion. Always returns a project-specific verdict, so it is not for neutral explainers or generating options."
+description: "Give a decisive, project-grounded verdict on an external input — judged against the current project, not in the abstract. Use to decide whether to adopt, switch to, or revisit a technology, library, pattern, platform, or architecture; to compare a candidate against what the project already uses; to judge whether an external change (a CVE, a deprecation, an ecosystem shift) actually affects this project; or for a mid-session second opinion. Always returns a project-specific verdict, so it is not for neutral explainers or generating options."
 argument-hint: "[the external thing to judge, plus any links] — or invoke bare mid-session for a second opinion"
 ---
 
@@ -46,7 +46,12 @@ Dispatch is tiered by task shape, never hardcoded to a model name:
 
 3. **Apply the selection escape hatch.** If the input is a *selection* over a field ("what should we use for auth?"), it belongs here only when the realistic field is bounded (roughly five or fewer real candidates) and the criteria are knowable. If the field can't be bounded without inventing options, or the criteria are unclear, **stop**: return a Hold and route to `ce-ideate` (to enumerate) or `ce-brainstorm` (to surface criteria), then offer to re-run. Read `references/boundaries.md` only when the input's fit for `ce-pov` is genuinely in doubt or the field can't be bounded; skip it for a clearly in-scope verdict.
 
-4. **Classify the reversibility tier.** Infer it from project signals: a dependency, lint rule, or config reads as a **two-way door (Tier 1)**; a data store, auth provider, public API/contract, migration, or a security/legal surface reads as a **one-way door (Tier 2/3)**. State the tier in the verdict and let the user override. The tier sizes the rest of the run (Phase 1 scout count, Phase 2 depth, Phase 3 reversal trigger) — do not run a Tier-3 workup on a trivially reversible `npm i`.
+4. **Classify the reversibility tier — three levels.** Infer it from project signals:
+   - **Tier 1 — two-way door:** a dependency, lint rule, or config; trivially reversible.
+   - **Tier 2 — one-way but bounded:** a data store, an internal API/contract, or a migration whose blast radius stays inside this codebase.
+   - **Tier 3 — one-way and high-stakes:** a security, legal, or privacy surface; a public API/contract; or an irreversible data migration.
+
+   State the tier in the verdict and let the user override. The tier sizes the rest of the run (Phase 1 scout count, Phase 2 depth, Phase 3 reversal trigger): Tier 1 stays a one-screen verdict off a single combined grounding pass; Tier 2 adds the full scout fleet and an alternatives pass; Tier 3 adds deep external research, a precedent search, and a durable-record offer. Do not run a Tier-3 workup on a trivially reversible `npm i`, or hand a security-surface decision the moderate Tier-2 treatment.
 
 ### Phase 1: Ground (dispatch scouts, never inline)
 
