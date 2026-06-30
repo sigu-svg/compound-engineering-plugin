@@ -77,6 +77,8 @@ Call the result the **resolved task**, and note whether it came from a recording
 
 7. Invoke the `ce-test-browser` skill with `mode:pipeline`.
 
+   **Skip** this step when the branch diff touches no web-ui surface — docs-only changes, or changes confined to cli/api/library/ios — since there are no affected pages to drive (step 8 dogfoods those surfaces hands-on). Otherwise run it; the skill self-scopes to the pages the diff affects.
+
 8. **Dogfood the change as a real user** (ALWAYS run; do not skip)
 
    `ce-dogfood` is `disable-model-invocation` and cannot be invoked from this pipeline, so perform its diff-scoped dogfooding behavior directly. This is hands-on exercise of the changed journeys, distinct from the automated browser tests in step 7.
@@ -95,6 +97,8 @@ Call the result the **resolved task**, and note whether it came from a recording
    Invoke the `ce-compound` skill with `mode:headless`, passing a one-line context hint describing what was built or fixed. This is LFG's **compound-out**: it runs non-interactively and writes any durable, non-obvious learning from this run — a debugged root cause, a convention or tooling decision, a workflow insight — into `docs/solutions/`, so the next LFG run's planning research (step 1) starts ahead of this one.
 
    This step is non-blocking: if `ce-compound` finds nothing durable to capture it ends with `Documentation skipped`, which is a success, not an error. Do not commit here; leave any written learning doc in the working tree for step 10 to commit and push (respecting the shipping precondition).
+
+   In headless mode `ce-compound` may also apply a one-time discoverability edit to an instruction file (`AGENTS.md` or `CONCEPTS.md`) so future agents know to check `docs/solutions/`. Like the learning doc, that edit is left uncommitted and ships in this run's PR via step 10 — that is expected, not stray output; do not revert it.
 
 10. Invoke the `ce-commit-push-pr` skill.
 
