@@ -46,4 +46,4 @@ if ! lsof -i ":${PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 ```
 
-Once the server is confirmed listening on `$PORT`, return to the main workflow at the "Test Each Affected Page" step (open `http://localhost:${PORT}`, snapshot, then test each route).
+The scan may land on a different port than the preferred one, and `$PORT` does not survive into later Bash calls. Note the number this block echoes ("Using dev server port: N") and substitute that literal port into every subsequent `agent-browser` command — do not rely on `${PORT}` carrying over into the main workflow's snippets. Then return to the "Test Each Affected Page" step (open `http://localhost:<N>`, snapshot, then test each route).
