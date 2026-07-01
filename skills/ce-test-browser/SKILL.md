@@ -15,7 +15,7 @@ Run end-to-end browser tests on pages affected by a PR or branch changes using t
 
 ## Use `agent-browser` Only
 
-Use the `agent-browser` CLI for every browser action in this skill — opening pages, clicking, filling forms, snapshots, screenshots. Do not substitute a browser MCP integration, a built-in browser-control tool, Playwright, or Puppeteer. If the host offers several ways to drive a browser, choose `agent-browser`.
+Use the `agent-browser` CLI for every browser action in this skill — opening pages, clicking, filling forms, snapshots, screenshots — and use it exclusively. Do not use any other browser-automation tool, including a browser MCP integration, a built-in browser-control tool, Playwright, or Puppeteer. If the host offers several ways to drive a browser, always choose `agent-browser`.
 
 - Claude Code: do not use Chrome MCP tools (`mcp__claude-in-chrome__*`).
 - Codex: do not substitute unrelated browsing tools.
