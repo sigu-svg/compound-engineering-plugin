@@ -17,6 +17,19 @@ export const CLAUDE_FAMILY_ALIASES: Record<string, string> = {
 }
 
 /**
+ * Canonical Claude model IDs that reject non-default sampling params
+ * (`temperature`/`top_p`/`top_k`) with HTTP 400. Emitting an inferred
+ * temperature alongside one of these produces a config that fails at runtime.
+ * Keep in sync with CLAUDE_FAMILY_ALIASES when new generations are released.
+ * See the Sonnet 5 and Opus 4.7/4.8 migration notes.
+ */
+const SAMPLING_PARAM_REJECTING_MODELS: ReadonlySet<string> = new Set([
+  "claude-sonnet-5",
+  "claude-opus-4-7",
+  "claude-opus-4-8",
+])
+
+/**
  * Resolve a bare Claude family alias to its canonical model name.
  * Returns the input unchanged if not a recognized alias.
  *
@@ -65,4 +78,17 @@ export function normalizeModelWithProvider(model: string): string {
     )
   }
   return addProviderPrefix(resolved)
+}
+
+/**
+ * Whether a model rejects non-default sampling params. Accepts a bare alias,
+ * a canonical ID, or a provider-prefixed ID; resolves aliases and strips the
+ * provider prefix so `sonnet` and `anthropic/claude-sonnet-5` both match.
+ *
+ * "sonnet"                     -> true  (resolves to claude-sonnet-5)
+ * "claude-sonnet-4-20250514"   -> false (dated Sonnet 4 accepts sampling params)
+ */
+export function rejectsSamplingParams(model: string): boolean {
+  const canonical = resolveClaudeFamilyAlias(model).replace(/^anthropic\//, "")
+  return SAMPLING_PARAM_REJECTING_MODELS.has(canonical)
 }
