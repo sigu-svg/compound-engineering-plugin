@@ -39,6 +39,8 @@ describe("ce-test-browser browser-driver policy", () => {
     expect(fallback).toContain("agent-browser skills get core")
     expect(fallback).toMatch(/CLI exists but cannot launch its browser/i)
     expect(fallback).toContain("agent-browser open <url>")
+    expect(fallback).toMatch(/use the `ce-setup` skill/i)
+    expect(fallback).not.toContain("/ce-setup")
   })
 
   test("pipeline mode changes orchestration without forcing a driver or hiding it", async () => {

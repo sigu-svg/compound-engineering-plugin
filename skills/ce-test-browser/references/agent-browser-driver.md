@@ -10,7 +10,7 @@ Verify the direct CLI is installed:
 command -v agent-browser >/dev/null 2>&1 && echo "Ready" || echo "NOT INSTALLED"
 ```
 
-If it is missing, tell the user: "`agent-browser` is not installed. Run `/ce-setup` for the current install command, then install agent-browser and retry." Then stop. An installed discovery skill does not imply that the CLI or its browser runtime is installed.
+If it is missing, tell the user: "`agent-browser` is not installed. Use the `ce-setup` skill to print the current install command, then install `agent-browser` and retry." Then stop. An installed discovery skill does not imply that the CLI or its browser runtime is installed.
 
 Before running browser actions, load the workflow and troubleshooting content that matches the installed CLI:
 
