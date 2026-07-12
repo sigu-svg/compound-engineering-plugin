@@ -48,6 +48,18 @@ Prefer small units of weaker-model insurance. Put one threshold, enum, count, qu
 
 If a capable model's output becomes worse after adding prose, remove judgment guidance and non-load-bearing steps first. Do not respond to lost reasoning quality by stacking more protocol.
 
+### Admit instruction prose deliberately
+
+Every line of always-loaded skill prose must change agent behavior or supply domain knowledge that changes a decision. A line earns its place when it does at least one of these:
+
+- States a falsifiable constraint such as a threshold, format, path, schema, ordering rule, or completion branch.
+- Counters a known default tendency or observed shortcut that would violate the outcome.
+- Supplies domain knowledge the agent would not otherwise have and that can materially change its judgment.
+
+Delete generic exhortations such as "be thorough," "think carefully," or "produce high-quality work." An adjective belongs only when an adjacent rule makes it observable, such as "keep the handoff concise: include only facts needed for the next decision." Do not append motivational rationale to a directive that already stands on its own.
+
+Do not repeat an instruction merely for emphasis. Repeat it only at a demonstrated drift point where placement changes whether it fires; otherwise keep one authoritative copy. When two always-loaded copies are genuinely required, protect their parity mechanically.
+
 ## The portability problem
 
 A portable skill operates across two execution axes under one authority overlay:
