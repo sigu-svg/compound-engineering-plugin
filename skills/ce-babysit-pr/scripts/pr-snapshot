@@ -690,8 +690,12 @@ def _wake_reason(a, settle_seconds):
     # only delays). Only wake once quiet has actually elapsed, so a stable green PR is not roused
     # every poll while it cools off.
     review_blocking = a.get("review_in_progress") and a.get("quiet_seconds", 0) < REVIEW_INPROGRESS_MAX_WAIT
+    # Interactive merge-ready does NOT require `all_checks_ok`'s "at least one observed check": a repo
+    # with no configured checks has a CLEAN/MERGEABLE PR that should be callable ready. (That guard
+    # stays in pipeline success, where a not-yet-created rollup must not read as a pass.)
     if (a.get("mergeable") == "MERGEABLE" and a.get("merge_state_status") == "CLEAN"
-            and a.get("all_checks_ok") and a.get("checks_terminal")
+            and a.get("checks_terminal") and not a.get("has_failing_checks")
+            and a.get("checks_awaiting_approval", 0) == 0
             and not review_blocking
             and a.get("quiet_seconds", 0) >= settle_seconds):
         return "merge-ready"

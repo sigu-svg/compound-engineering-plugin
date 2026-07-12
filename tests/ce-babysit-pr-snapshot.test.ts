@@ -436,6 +436,13 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     expect(watch(path.join(dir, "rip2"), nosig, ["--settle-seconds", "0"]).reason).toBe("merge-ready")
   })
 
+  test("watch: a no-check MERGEABLE/CLEAN PR still reaches merge-ready (the >=1-check guard is pipeline-only)", () => {
+    // A repo with no configured checks: all_checks_ok is false (no observed check), but the
+    // interactive merge-ready wake must still fire for a CLEAN/MERGEABLE PR with no backlog.
+    const nochecks = { ...FAILING, merge_state_status: "CLEAN", review_decision: "APPROVED", threads: [], checks: [] }
+    expect(watch(path.join(dir, "nc1"), fetchFile(dir, "nc1.json", nochecks), ["--settle-seconds", "0"]).reason).toBe("merge-ready")
+  })
+
   test("watch: a dispatched terminal-red check present at arm is a standing residual — kept watching, not re-woken", () => {
     // A failing check ce-debug marked dispatched leaves counts.ci == 0 while has_failing_checks stays
     // true. It was already surfaced when it was dispatched, so it is in the watch's arm-time baseline
