@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test"
 import { spawnSync } from "node:child_process"
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { mkdtempSync, writeFileSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
@@ -290,6 +290,23 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     mark(sd, ["--comment", "IC_1", "--disposition", "dispatched", "--acted-edit-id", "h"])
     const d = snapshot(sd, fetchFile(dir, "st2.json", fb("s2"))) // dispatched + head moved -> handled, progress
     expect(d.trajectory.heads_since_progress).toBe(0)
+  })
+
+  test("--reset-session restarts the budget clock so a resumed watch is not instantly over-budget", () => {
+    const sd = path.join(dir, "sess")
+    snapshot(sd, fetchFile(dir, "se1.json", FAILING)) // creates state with started_at = now
+    // simulate resuming days later against persisted state: backdate started_at
+    const statePath = path.join(sd, "state.json")
+    const st = JSON.parse(readFileSync(statePath, "utf8"))
+    st.started_at = "2020-01-01T00:00:00+00:00"
+    writeFileSync(statePath, JSON.stringify(st))
+    // without reset -> session_seconds is huge (measured from 2020)
+    expect(snapshot(sd, fetchFile(dir, "se2.json", FAILING)).session_seconds).toBeGreaterThan(1_000_000)
+    // with --reset-session -> the clock restarts, session_seconds ~0
+    const r = spawnSync("python3", [SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
+      "--fetch-file", fetchFile(dir, "se3.json", FAILING), "--reset-session"], { encoding: "utf8" })
+    expect(r.status, r.stderr).toBe(0)
+    expect(JSON.parse(r.stdout).session_seconds).toBeLessThan(10)
   })
 
   test("clearing a fork approval gate is movement (resets the settle clock so merge-ready waits for check-runs)", () => {

@@ -666,6 +666,11 @@ def _run_snapshot(args, now):
     with locked_state(args.state_dir, args.pr, args.repo, now) as box:
         if box["state"].get("pr", {}).get("url") is None and cur.get("url"):
             box["state"]["pr"]["url"] = cur["url"]
+        if getattr(args, "reset_session", False):
+            # A new babysit session (fresh invocation / watch arm) starts the budget clock now. Without
+            # this, `started_at` persists from state creation, so resuming against day-old state would
+            # read session_seconds as huge and hand back as "budget exhausted" before doing any work.
+            box["state"]["started_at"] = _iso(now)
         actionable, box["state"] = diff(box["state"], cur, now)
     return actionable
 
@@ -742,11 +747,13 @@ def cmd_watch(args):
     only a *new* blocker (signature grown past the baseline) wakes."""
     deadline = (time.monotonic() + args.max_runtime) if args.max_runtime else None
     armed = None  # baseline blocker signature captured on the first poll (already-surfaced residuals)
+    args.reset_session = True   # arming a watch is a fresh session -> start the budget clock now
     while True:
         if args.stop_file and os.path.exists(args.stop_file):
             _emit_wake("stop-signal")
             return
         actionable = _run_snapshot(args, _now())
+        args.reset_session = False   # ...but later polls are ticks of that same session, not new ones
         if armed is None:
             armed = _blocker_sig(actionable)
         reason = _wake_reason(actionable, args.settle_seconds)
@@ -825,6 +832,7 @@ def main():
     s.add_argument("--repo", default=None)
     s.add_argument("--state-dir", required=True)
     s.add_argument("--fetch-file", default=None)
+    s.add_argument("--reset-session", action="store_true")  # start the budget clock (a fresh invocation)
     s.set_defaults(func=cmd_snapshot)
 
     m = sub.add_parser("mark")
@@ -850,6 +858,7 @@ def main():
     w.add_argument("--settle-seconds", type=float, default=300.0, help="quiet window before a merge-ready wake")
     w.add_argument("--stop-file", default=None, help="path whose existence stops the watch")
     w.add_argument("--fetch-file", default=None)
+    w.add_argument("--reset-session", action="store_true")  # cmd_watch also forces this on arm
     w.set_defaults(func=cmd_watch)
 
     args = p.parse_args()
