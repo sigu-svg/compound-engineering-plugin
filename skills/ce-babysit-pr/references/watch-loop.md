@@ -59,7 +59,7 @@ A loop can churn without finishing: CI **ping-pong** (fix A surfaces B, fix B br
 
 ## On-disk state contract
 
-State lives at `/tmp/compound-engineering/ce-babysit-pr/<owner>-<repo>-<pr>/state.json` (a stable, cross-invocation-reusable path so any later tick — scheduled or hand-run — finds it). The `pr-snapshot` script owns all reads and writes under a file lock. Shape:
+State lives at `/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<pr>/state.json` (a stable, cross-invocation-reusable path so any later tick — scheduled or hand-run — finds it). The `<host>` segment (from the PR URL, `github.com` on the public host) is load-bearing for GitHub Enterprise: without it, two PRs sharing `owner/repo#N` on different hosts would reuse one `state.json` and cross-contaminate dispositions. The `pr-snapshot` script owns all reads and writes under a file lock. Shape:
 
 ```json
 {
@@ -120,7 +120,7 @@ The settle window guards the most damaging false positive: "CI went green, told 
 - **Merge conflict mid-flight** (`mergeable == "CONFLICTING"`): merge base into head locally and split like the fix-authority boundary — **mechanical** conflicts (lockfiles, changelog/generated files, non-overlapping additions) resolve + commit + push; a **semantic** conflict (both sides changed the same logic, so resolving decides intended behavior) aborts the merge and surfaces as `needs-human` with `decision_context`. **Never rebase or force-push** — rewriting a PR head branch is destructive; a base-into-head merge is the only safe mechanism.
 - **External head change / force-push:** the head SHA moved under the loop. The snapshot clears SHA-scoped CI state automatically; just re-snapshot. Never clobber unrelated pushed work.
 - **PR closed or merged externally:** detected as `pr_state != "OPEN"` on any tick → clean exit with a final status.
-- **needs-human feedback:** `ce-resolve-pr-feedback` leaves those threads open and returns them as escalations; record each with `mark ... --disposition needs-human`, keep doing independent CI work, and surface them. Never auto-decline or auto-resolve a thread you did not fix. Past a small threshold of accumulated escalations, stop and hand back.
+- **needs-human feedback:** `ce-resolve-pr-feedback` leaves those threads open and returns them as escalations; record each with `mark ... --disposition needs-human`, keep doing independent CI work, and surface them. Never auto-decline or auto-resolve a thread you did not fix. A parked `needs-human` is a **standing residual** (SKILL.md Step 3): it blocks *declaring* merge-ready but does **not** end the watch — keep handling new CI and later review rounds around it. Only a true stop (terminal / looks-ready / the budget cap) ends the loop, not a count of accumulated escalations.
 - **No push access / fork PR:** a delegated push will fail. Detect that from the delegated skill's result, report it, and stop — the loop cannot make progress it has no permission to make.
 - **CI that never completes:** a check stuck `IN_PROGRESS` for a long time will keep the loop from settling. When the session budget (`session_seconds` cap) is reached, hand back with "CI still running after <N>" rather than looping forever.
 - **Rate limits / transient API errors:** honor the reset time, back off, resume. The claim→confirm protocol protects against replay.

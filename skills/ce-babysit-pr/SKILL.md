@@ -159,6 +159,8 @@ Otherwise (interactive), classify each condition as either a **true stop** (the 
 
 Check cheaply (one `gh` call at the settle decision — reactions on the PR body + reviews-vs-current-head — not every tick). **Repos often run several review bots on different signals and rules, and none is reliable**, so treat the above as *examples of the pattern, not a fixed rule*: a present done/in-progress signal from any reviewer is meaningful, absence is not, and you never block terminally on a signal that may never arrive. This guard only ever adjusts the *wait*; it never *asks* the user — the self-sustaining watch just keeps waiting on the detector until the window clears (Step 5).
 
+**Avoid the merge-ready busy-wake.** The detector automates only the 👀 signal (`review_in_progress`), so it *will* emit a `merge-ready` wake once the cheap fields and the quiet window pass even though a **non-👀** signal you can only see at the settle decision — a "reviewing…" comment, or a reviewer that reviewed an *older* head — says a review is still expected. When you judge one of those present and reject the wake, do **not** re-arm `watch` with the same settle: re-arm it with the **generous `--settle-seconds`** (e.g. ~600s) so the detector waits out that longer window before re-emitting `merge-ready`, instead of firing again on the next poll. The larger settle *is* how "keep waiting for the expected review" is enforced against a detector that can't see that signal.
+
 ## Step 4: Report / summary
 
 Every stop — and every checkpoint tick — ends with a summary. Write it however reads cleanly; the format is yours. What matters is that it hits these goals, because each counters a specific way these summaries fail:
