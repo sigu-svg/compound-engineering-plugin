@@ -440,16 +440,17 @@ def _apply_dispositions(items, id_key, prior, identity_fn=None):
     records a non-open disposition (persisted in prior[id]['disposition']). Returns
     (persisted_by_id, actionable_list, open_needs_human_count).
 
-    When identity_fn is given (threads only), a `dispatched` item is *reactivated* — set back to
-    open and re-actionized — once its last-comment identity moves past the one we acted on. That
-    acted-on identity is captured lazily on the first tick we observe the item as dispatched, which
-    is *after* the resolver's own reply has already landed in the fetch — so our reply becomes the
-    baseline and does not re-trigger, while a genuine later reviewer comment does. `needs-human` is
-    never auto-reactivated here (it stays parked via open_needs_human); an explicit `mark
-    --disposition open` is the only way to un-park it. Non-thread feedback has no identity_fn: a new
-    top-level comment is a new id, not fresh activity on an existing one, so there is nothing to
-    reactivate. This is what stops a dispatched-but-unresolved thread with fresh reviewer activity
-    from being silenced out of counts.threads and letting the merge-ready gate call the PR ready."""
+    When identity_fn is given, a `dispatched` **or** `needs-human` item is *reactivated* — set back
+    to open and re-actionized — once its last-comment / edit identity moves past the one we acted on.
+    That acted-on identity is captured lazily on the first tick we observe the item parked, which is
+    *after* our own reply (a fix acknowledgment, or a needs-human `decision_context` reply) has
+    already landed in the fetch — so our reply becomes the baseline and does not re-trigger, while a
+    genuine later comment does. For `needs-human` this is exactly how a **human answering the parked
+    question** (a reviewer reply, or an edit of the top-level comment) re-opens it and wakes the loop,
+    instead of it sitting parked forever; an explicit `mark --disposition open` still forces it too.
+    This is also what stops a dispatched-but-unresolved thread with fresh reviewer activity from being
+    silenced out of counts.threads and letting the merge-ready gate call the PR ready. An item with no
+    identity_fn never auto-reactivates (a brand-new top-level comment is just a new id)."""
     persisted, actionable, needs_human = {}, [], 0
     for it in items:
         iid = it.get(id_key)
@@ -458,12 +459,12 @@ def _apply_dispositions(items, id_key, prior, identity_fn=None):
         pri = prior.get(iid, {})
         disposition = pri.get("disposition", DISPOSITION_OPEN)
         acted_identity = pri.get("acted_identity")
-        if disposition == DISPOSITION_DISPATCHED and identity_fn is not None:
+        if disposition in (DISPOSITION_DISPATCHED, DISPOSITION_NEEDS_HUMAN) and identity_fn is not None:
             current_identity = identity_fn(it)
             if acted_identity is None:
                 acted_identity = current_identity   # first post-action observation: adopt as baseline
             elif current_identity != acted_identity:
-                disposition = DISPOSITION_OPEN       # fresh reviewer activity -> reactivate
+                disposition = DISPOSITION_OPEN       # a later human/reviewer reply past our baseline -> reactivate
                 acted_identity = None
         if disposition == DISPOSITION_OPEN:
             actionable.append(it)
@@ -527,8 +528,9 @@ def diff(state, cur, now=None):
     #     is still unresolved is reactivated once its last-comment identity moves past the one we
     #     acted on (acted_identity) — so a reviewer re-engaging is not silently dropped, yet the
     #     acting loop's own reply (captured as the baseline on first observation) does not
-    #     re-trigger. A `needs-human` thread stays parked regardless (open_needs_human keeps
-    #     merge-ready from firing); it re-opens only on an explicit `mark --disposition open`.
+    #     re-trigger. A `needs-human` thread stays parked (open_needs_human keeps merge-ready from
+    #     firing) until a *human* answers it — a later reply/edit past that same baseline reopens and
+    #     wakes it — or an explicit `mark --disposition open` forces it.
     #   - Feedback (top-level comments + review bodies): no remote "resolve" exists, so an item
     #     never drops out on its own — `mark --comment <id>` is the only thing that silences it. A
     #     dispatched item reactivates only when its own body is *edited* (edit_id changes) to add a
@@ -576,7 +578,7 @@ def diff(state, cur, now=None):
     # "OK" requires every check terminal, none failing, AND none gated on approval. A still-
     # IN_PROGRESS or awaiting-approval check is neither ok nor failing — do not exit green.
     all_checks_ok = checks_terminal and not has_failing and bool(cur["checks"]) and awaiting_approval == 0
-    blocked_external = (awaiting_approval > 0 and not has_failing
+    blocked_external = (awaiting_approval > 0 and not has_failing and checks_terminal
                         and not actionable_threads and not actionable_feedback)
 
     return {

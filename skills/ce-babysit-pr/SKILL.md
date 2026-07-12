@@ -75,7 +75,7 @@ python3 "$SKILL_DIR/scripts/pr-snapshot" snapshot --pr <N> --repo <owner/repo> -
 **In the self-sustaining watch, back the tick with the background change-detector.** `pr-snapshot watch` runs that same fetch→diff on an interval with **no agent tokens** and prints a single `BABYSIT_WAKE {reason,url,...}` line *only* when there's an actionable change (`reason: actionable`) or a stop condition (`terminal` / `blocked-external` / `blocked-failing` — a dispatched check left terminally red — / `needs-human` / `merge-ready` after the settle window / `max-runtime` / `stop-signal`) — then exits. Background it and wait on that line with your harness's background-and-wake tool (Step 1); on the sentinel, run the tick below:
 
 ```bash
-SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>"
+SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>";
 python3 "$SKILL_DIR/scripts/pr-snapshot" watch --pr <N> --repo <owner/repo> --state-dir "$STATE_DIR" --interval 150 --settle-seconds 300
 ```
 
@@ -94,7 +94,7 @@ The snapshot emits the **actionable set** — unresolved threads you have not ye
 3. **Feedback before CI.** If the actionable set has **either** unresolved threads **or** non-thread feedback (`counts.threads > 0` or `counts.comments > 0`), invoke `ce-resolve-pr-feedback` **once**, passing the resolved PR ref — the base `[HOST/]OWNER/REPO#N` or the full PR URL from the snapshot's `url` (so a fork→upstream PR resolves against the **upstream base**, not the fork checkout's `origin`, which would query the wrong PR namespace) — in full mode; it re-fetches and judges *all* feedback — inline threads, review bodies, and top-level comments — and is idempotent on empty. The `actionable.comments` items are the top-level/review-body feedback the resolver would otherwise not know the loop cares about — a Changes-Requested review body or a bare top-level "please rename X" with **no inline thread** must still trigger a pass. **When the review trigger above is crossed (rising backlog, new-item arrivals, or a repeating cluster), pass the `trajectory`** so it can judge a treadmill / wrong-approach nitpick cluster and return one approach-level `needs-human` instead of fixing forever. One resolve pass per tick — never fan out multiple. When it returns, record what it left unresolved so the loop stops re-dispatching it (re-set the vars inline — shell state does not persist between calls): for each `needs-human` **thread**, `mark --thread <ID> --disposition needs-human`. Then reconcile the **comments you passed** — a top-level comment / review body never drops out of the fetch on its own, and `ce-resolve` **silently drops** non-actionable ones (bot review-wrappers) without reporting them back. So **mark *every* comment you passed as `dispatched`** (`mark --comment <ID> --disposition dispatched`), **except** those `ce-resolve` returned as `needs-human` (mark those `--disposition needs-human`). Marking only the ones it explicitly *handled* would leave the silently-dropped wrappers actionable forever, so `counts.comments` would never reach 0 and the loop would never settle:
 
 ```bash
-SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>"
+SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>";
 python3 "$SKILL_DIR/scripts/pr-snapshot" mark --state-dir "$STATE_DIR" --thread <ID> --disposition needs-human
 python3 "$SKILL_DIR/scripts/pr-snapshot" mark --state-dir "$STATE_DIR" --comment <ID> --disposition dispatched
 ```
@@ -107,7 +107,7 @@ These are decisions the resolver judged would change intended behavior or need a
    Then record each check you acted on so it is not re-dispatched at this head (re-set the vars inline):
 
    ```bash
-   SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>"
+   SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering/ce-babysit-pr/<host>-<owner>-<repo>-<N>";
    python3 "$SKILL_DIR/scripts/pr-snapshot" mark --state-dir "$STATE_DIR" --check "<key>"
    ```
 

@@ -246,16 +246,32 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     expect(snapshot(sd, fetchFile(dir, "r4.json", thr("C2"))).counts.threads).toBe(1)
   })
 
-  test("a needs-human thread is NOT reactivated by an identity change (stays parked via open_needs_human)", () => {
-    const sd = path.join(dir, "nhpark")
+  test("a needs-human thread reactivates when a human answers it (a later reply past the baseline), not on our own decision_context reply", () => {
+    const sd = path.join(dir, "nhreact")
     const thr = (cid: string) => ({
       ...FAILING, checks: [], threads: [{ thread_id: "T1", last_comment_id: cid, last_comment_at: cid }],
     })
     snapshot(sd, fetchFile(dir, "nh1.json", thr("C1")))
     mark(sd, ["--thread", "T1", "--disposition", "needs-human"])
-    const d = snapshot(sd, fetchFile(dir, "nh2.json", thr("C2"))) // identity moved
-    expect(d.counts.threads).toBe(0) // not reactivated
-    expect(d.open_needs_human).toBe(1) // still parked, still blocks merge-ready
+    // first observation after our decision_context reply (C2) -> adopt as baseline, stays parked
+    const d1 = snapshot(sd, fetchFile(dir, "nh2.json", thr("C2")))
+    expect(d1.counts.threads).toBe(0)
+    expect(d1.open_needs_human).toBe(1) // still parked, blocks merge-ready
+    // a human replies past the baseline (C3) -> reactivated to actionable, no longer parked
+    const d2 = snapshot(sd, fetchFile(dir, "nh3.json", thr("C3")))
+    expect(d2.counts.threads).toBe(1) // reopened -> the loop reprocesses with the human's input
+    expect(d2.open_needs_human).toBe(0)
+  })
+
+  test("blocked_external waits for other running checks — does not fire while a check is still IN_PROGRESS", () => {
+    const RUNNING = { key: "CI/b", name: "b", status: "IN_PROGRESS", conclusion: null, details_url: "u" }
+    const GREEN = { key: "CI/a", name: "a", status: "COMPLETED", conclusion: "SUCCESS", details_url: "u" }
+    // awaiting approval + a still-running check -> NOT blocked_external yet (that check could fail)
+    const running = { ...FAILING, threads: [], checks: [RUNNING], awaiting_approval: 1 }
+    expect(snapshot(path.join(dir, "be1"), fetchFile(dir, "be1.json", running)).blocked_external).toBe(false)
+    // awaiting approval + all other checks terminal -> blocked_external
+    const terminal = { ...FAILING, threads: [], checks: [GREEN], awaiting_approval: 1 }
+    expect(snapshot(path.join(dir, "be2"), fetchFile(dir, "be2.json", terminal)).blocked_external).toBe(true)
   })
 
   test("a dispatched top-level comment reactivates when its body is edited (edit_id changes), not on our reply", () => {
