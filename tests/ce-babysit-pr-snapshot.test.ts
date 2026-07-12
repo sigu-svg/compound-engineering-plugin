@@ -258,6 +258,20 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     expect(d.open_needs_human).toBe(1) // still parked, still blocks merge-ready
   })
 
+  test("a dispatched top-level comment reactivates when its body is edited (edit_id changes), not on our reply", () => {
+    // A non-actionable wrapper marked dispatched, later edited to add an actionable request, must
+    // return to actionable — our own reply is a separate top-level comment and never edits it.
+    const sd = path.join(dir, "editfb")
+    const fb = (edit: string) => ({
+      ...FAILING, merge_state_status: "CLEAN", review_decision: "APPROVED", checks: [], threads: [],
+      feedback: [{ id: "IC_1", kind: "comment", author: "reviewer", edit_id: edit }],
+    })
+    snapshot(sd, fetchFile(dir, "e1.json", fb("h1"))) // actionable
+    mark(sd, ["--comment", "IC_1", "--disposition", "dispatched"])
+    expect(snapshot(sd, fetchFile(dir, "e2.json", fb("h1"))).counts.comments).toBe(0) // same body -> silenced
+    expect(snapshot(sd, fetchFile(dir, "e3.json", fb("h2"))).counts.comments).toBe(1) // edited -> reactivated
+  })
+
   test("a fork-PR workflow awaiting maintainer approval blocks 'all_checks_ok' and flags blocked_external", () => {
     const gated = {
       ...FAILING,

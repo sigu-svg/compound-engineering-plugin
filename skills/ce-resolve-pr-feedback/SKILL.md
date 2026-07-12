@@ -37,9 +37,10 @@ GitHub only — **including GitHub Enterprise**. This skill speaks GitHub's API 
 | No argument | **Full** -- all unresolved threads on the current branch's PR |
 | PR number (e.g., `123`) | **Full** -- all unresolved threads on that PR |
 | PR URL (e.g., `https://HOST/OWNER/REPO/pull/123`, no comment fragment) | **Full** -- all unresolved threads on that PR; parse `HOST`, `OWNER/REPO`, and the number from the URL (this is how `ce-babysit-pr` hands a fork→upstream PR to full mode against the right host/base) |
-| Comment/thread URL (a `pull/123#discussion_r...` or `#issuecomment-...` fragment) | **Targeted** -- only that specific thread |
+| Review-comment URL (a `pull/123#discussion_r...` fragment — a diff/review-thread comment) | **Targeted** -- only that specific review thread |
+| Issue-comment URL (a `pull/123#issuecomment-...` fragment — a top-level PR comment) | **Full** -- a top-level comment has no review thread to resolve; process the PR and address it as non-thread feedback |
 
-**Distinguishing the two URL shapes**: a bare `/pull/N` URL (no `#discussion_r`/`#issuecomment` fragment) is a whole-PR ref → **Full**; only a URL carrying a comment/thread fragment is **Targeted**.
+**Distinguishing the URL shapes**: a bare `/pull/N` URL **or** an `#issuecomment-` (top-level) fragment routes to **Full**; only a `#discussion_r` (review/diff-thread) fragment is **Targeted**. Targeted mode resolves a review thread via `repos/OWNER/REPO/pulls/comments/COMMENT_ID`, which only exists for diff comments — an issue comment sent there 404s, so it must go to Full.
 
 **Targeted mode**: When a comment/thread URL is provided, ONLY address that feedback. Do not fetch or process other threads.
 

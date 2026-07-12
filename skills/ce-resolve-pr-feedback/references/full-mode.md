@@ -16,8 +16,8 @@ Then fetch all feedback using the GraphQL script at [scripts/get-pr-comments](..
 **GitHub Enterprise host.** The bundled `gh api graphql` scripts hit `gh`'s default host unless told otherwise, so on a GHE PR they would wrongly target `github.com`. Derive the host: if the caller passed a full PR **URL**, take its host; otherwise read it from `gh repo view --json url -q .url`. Then — because shell state does **not** persist between separate Bash calls — pass the host as a `GH_HOST=<host>` **env prefix inline on every bundled-script call** (`gh api` honors `GH_HOST` as the request host). A single `export` in one block does **not** carry to the reply/resolve/verify blocks that run as later Bash calls, which is why each call below shows the prefix. On `github.com`, drop the `GH_HOST=<host> ` prefix entirely.
 
 ```bash
-PR_HOST=$(printf '%s' "<pr-url-if-one-was-passed>" | sed -n 's#^https\?://\([^/]*\)/.*#\1#p')
-[ -z "$PR_HOST" ] && PR_HOST=$(gh repo view --json url -q .url 2>/dev/null | sed -n 's#^https\?://\([^/]*\)/.*#\1#p')
+PR_HOST=$(printf '%s' "<pr-url-if-one-was-passed>" | sed -n 's#^https\?://\([^/]*\)/.*#\1#p');
+[ -z "$PR_HOST" ] && PR_HOST=$(gh repo view --json url -q .url 2>/dev/null | sed -n 's#^https\?://\([^/]*\)/.*#\1#p');
 echo "$PR_HOST"   # github.com -> no prefix; any other host -> prefix GH_HOST=<host> on each script call below
 ```
 
