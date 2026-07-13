@@ -195,10 +195,15 @@ provider_available() {
   esac
 }
 
-SELECTED=""   # space-separated resolved providers (bash 3.2-safe, no arrays needed here)
-SEL_COUNT=0
+# Collect the FULL ordered list of reachable candidates (installed, allowlisted,
+# non-host, deduped) -- NOT truncated to MAX_PEERS here. `command -v` proves a
+# route is installed but not that it is authenticated / un-throttled, which only
+# the actual run reveals; so the run loop below bounds by *successful* peers and
+# falls through to the next candidate when an earlier one fails at auth/rate-limit,
+# instead of the pass silently no-op'ing on an installed-but-unusable first choice.
 # `for p in $CANDIDATES` splits the CSV once at loop start under IFS=',', so IFS
 # stays comma for the whole loop; nothing in the body does IFS-sensitive splitting.
+SELECTED=""   # space-separated ordered reachable candidates (bash 3.2-safe)
 OLDIFS="$IFS"; IFS=','
 for p in $CANDIDATES; do
   p="$(printf '%s' "$p" | tr -d '[:space:]')"
@@ -208,20 +213,28 @@ for p in $CANDIDATES; do
   case " $SELECTED " in *" $p "*) continue ;; esac   # dedup
   if [ -n "$ALLOW" ] && ! in_csv "$p" "$ALLOW"; then log "provider '$p' not in CROSS_MODEL_PEERS allowlist; skipping"; continue; fi
   if ! provider_available "$p"; then log "provider '$p' has no installed route; skipping"; continue; fi
-  SELECTED="$SELECTED $p"; SEL_COUNT=$((SEL_COUNT + 1))
-  [ "$SEL_COUNT" -ge "$MAX_PEERS" ] && break
+  SELECTED="$SELECTED $p"
 done
 IFS="$OLDIFS"
 SELECTED="$(printf '%s' "$SELECTED" | sed 's/^ *//')"
 
 [ "$MAX_PEERS" -ge 1 ] || skip "CROSS_MODEL_MAX_PEERS=0; cross-model pass disabled"
 [ -n "$SELECTED" ] || skip "no different-provider peer reachable (host=$HOST_PROVIDER, candidates='$CANDIDATES'); skipping"
-log "resolved cross-model peers for lens $REVIEWER_NAME: $SELECTED (host $HOST_PROVIDER excluded; max $MAX_PEERS)"
+log "reachable cross-model candidates for lens $REVIEWER_NAME: $SELECTED (host $HOST_PROVIDER excluded; up to $MAX_PEERS successful peer(s))"
+
+# first_n <max> <space-separated list> -> the first <max> tokens.
+first_n() {
+  local max="$1"; shift; local n=0 out=""
+  for t in "$@"; do [ "$n" -ge "$max" ] && break; out="$out $t"; n=$((n + 1)); done
+  printf '%s' "${out# }"
+}
 
 # Diagnostic: resolve selection only, no model call, no side effects (used by the
-# selection/availability tests, which stub the route CLIs on PATH).
+# selection tests, which stub the route CLIs on PATH). Prints the happy-path peer
+# set (the first MAX_PEERS reachable candidates); the live run additionally falls
+# through to later candidates when an earlier one fails at auth/rate-limit.
 if [ -n "${CROSS_MODEL_DRY_RUN:-}" ]; then
-  printf 'RESOLVED_PEERS: %s\n' "$SELECTED"
+  printf 'RESOLVED_PEERS: %s\n' "$(first_n "$MAX_PEERS" $SELECTED)"
   exit 0
 fi
 
@@ -391,10 +404,20 @@ run_provider() {   # <provider>
   # file if findings is not an array. Peer findings fold in as a corroboration
   # signal only -- synthesis (references/synthesis-and-presentation.md) never
   # auto-applies them and caps the cross-model bonus at one anchor step.
+  # Downgrade any peer finding's autofix_class from safe_auto to gated_auto: R18
+  # forbids a peer from granting silent-apply authority, and enforcing it here (not
+  # only in synthesis prose) means a peer cannot self-authorize a Phase 4 auto-apply
+  # regardless of what it returns. gated_auto preserves the peer's proposed fix but
+  # routes it through user confirmation.
   if [ -s "$OUT" ]; then
     _norm="$(mktemp "${TMPDIR:-/tmp}/xmodel-doc-norm-XXXXXX")"
     if jq --arg r "$REVIEWER_NAME-$provider" \
-         'if (.findings|type)=="array" then {reviewer:$r, findings, residual_risks:(.residual_risks // []), deferred_questions:(.deferred_questions // [])} else empty end' \
+         'if (.findings|type)=="array"
+          then { reviewer: $r,
+                 findings: [ .findings[] | if (.autofix_class? == "safe_auto") then .autofix_class = "gated_auto" else . end ],
+                 residual_risks: (.residual_risks // []),
+                 deferred_questions: (.deferred_questions // []) }
+          else empty end' \
          "$OUT" > "$_norm" 2>/dev/null; then mv "$_norm" "$OUT"; else rm -f "$_norm"; fi
   fi
   if [ -s "$OUT" ] && jq -e '(.reviewer|type=="string") and (.findings|type=="array") and (.residual_risks|type=="array") and (.deferred_questions|type=="array")' "$OUT" >/dev/null 2>&1; then
@@ -406,8 +429,19 @@ run_provider() {   # <provider>
   fi
 }
 
-# --- run each selected provider (<= CROSS_MODEL_MAX_PEERS) ------------------
+# --- run candidates in order until MAX_PEERS produce usable output ----------
+# run_provider writes <run-dir>/<lens>-<provider>.json on success and removes it
+# on a classified failure (not-installed route left, unauth, rate-limit, timeout,
+# unparseable). A failed candidate consumes no peer slot, so the pass falls through
+# to the next reachable provider instead of silently producing nothing.
+peers=0
 for provider in $SELECTED; do
+  [ "$peers" -ge "$MAX_PEERS" ] && break
   run_provider "$provider"
+  if [ -s "$RUN_DIR/$REVIEWER_NAME-$provider.json" ]; then
+    peers=$((peers + 1))
+  else
+    log "provider $provider unusable (unauth/rate-limited/failed); falling through to next reachable candidate"
+  fi
 done
 exit 0

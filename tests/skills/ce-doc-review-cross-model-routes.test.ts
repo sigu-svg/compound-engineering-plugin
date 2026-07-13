@@ -328,4 +328,44 @@ describe("cross-model-doc-review normalization (R18, KTD5)", () => {
     expect(r.code).toBe(0)
     expect(r.files).toHaveLength(0)
   })
+
+  test("downgrades a peer safe_auto finding to gated_auto (R18), preserving other fields", () => {
+    // A peer must never grant silent-apply authority; the script strips safe_auto
+    // at fold-in rather than trusting synthesis prose to do it.
+    const stub =
+      `#!/bin/sh\ncat >/dev/null\nprintf '%s' '{"structured_output":{"reviewer":"adversarial","findings":[{"section":"X","title":"t","autofix_class":"safe_auto","confidence":100}]}}'\n`
+    const { env } = sandbox(["claude"], stub)
+    const doc = makeDoc()
+    const runDir = makeRunDir()
+    run(["codex", "claude", "adversarial", doc, "plan", "none", runDir], runDir, env)
+    const out = JSON.parse(
+      readFileSync(path.join(runDir, "adversarial-claude.json"), "utf8"),
+    )
+    expect(out.findings[0].autofix_class).toBe("gated_auto")
+    expect(out.findings[0].confidence).toBe(100)
+  })
+})
+
+describe("cross-model-doc-review run-loop failover (R15, R16)", () => {
+  const okStub =
+    `#!/bin/sh\ncat >/dev/null\nprintf '%s' '{"structured_output":{"reviewer":"adversarial","findings":[{"section":"X","title":"t"}]}}'\n`
+  const failStub = `#!/bin/sh\ncat >/dev/null 2>&1\nexit 1\n`
+
+  test("falls through an installed-but-failing provider to the next reachable one", () => {
+    // The first candidate (claude) is installed but 'unauthenticated' (fails, writes
+    // no output); with MAX_PEERS=1 the pass must not silently no-op — it should fall
+    // through to the reachable grok rather than stopping at the failed first choice.
+    const { bin, env } = sandbox(["claude", "grok"])
+    writeFileSync(path.join(bin, "claude"), failStub)
+    chmodSync(path.join(bin, "claude"), 0o755)
+    writeFileSync(path.join(bin, "grok"), okStub)
+    chmodSync(path.join(bin, "grok"), 0o755)
+    const doc = makeDoc()
+    const runDir = makeRunDir()
+    // host=codex excludes codex; candidates claude,grok; MAX_PEERS defaults to 1.
+    const r = run(["codex", "claude,grok", "adversarial", doc, "plan", "none", runDir], runDir, env)
+    expect(r.code).toBe(0)
+    expect(r.files).toContain("adversarial-grok.json")
+    expect(r.files).not.toContain("adversarial-claude.json")
+  })
 })
