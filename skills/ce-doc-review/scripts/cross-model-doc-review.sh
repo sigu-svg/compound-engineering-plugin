@@ -382,8 +382,13 @@ attempt_route() {   # <provider> <route>
         recover_findings_json "$PEERLOG" "$OUT" && log "recovered codex JSON from stdout (-o file unavailable)"
       fi
       ;;
-    grok-cli)                 run_timeout_cmd ""            ; parse_structured "$PEERLOG" "$OUT" ;;
-    claude|grok-cursor|composer) run_timeout_cmd "$PROMPT_FILE"; parse_structured "$PEERLOG" "$OUT" ;;
+    grok-cli)    run_timeout_cmd ""            ; parse_structured "$PEERLOG" "$OUT" ;;   # grok reads --prompt-file
+    claude)      run_timeout_cmd "$PROMPT_FILE"; parse_structured "$PEERLOG" "$OUT" ;;   # claude -p reads stdin
+    grok-cursor|composer)
+      # cursor-agent takes the prompt as a positional argument (agent [prompt...]),
+      # not via stdin, so append the composed prompt as the final argv element.
+      CMD+=("$(cat "$PROMPT_FILE")")
+      run_timeout_cmd ""; parse_structured "$PEERLOG" "$OUT" ;;
   esac
 }
 

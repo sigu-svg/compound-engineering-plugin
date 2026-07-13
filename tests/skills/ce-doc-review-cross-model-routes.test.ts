@@ -392,4 +392,23 @@ describe("cross-model-doc-review argv integrity (multiline --json-schema)", () =
     expect(captured).toContain('"$schema"')
     expect(captured).toContain("deferred_questions")
   })
+
+  test("cursor-agent routes get the prompt as a positional arg, not stdin", () => {
+    // cursor-agent (grok fallback / composer) takes the prompt positionally; if the
+    // script only piped it on stdin the peer would start with an empty task.
+    const capRoot = mkTempRoot("xmodel-cap-")
+    const capFile = path.join(capRoot, "cursor-argv.txt")
+    const recordStub =
+      `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a"; done > "$PROMPT_CAPTURE"\ncat >/dev/null\nprintf '%s' '{"structured_output":{"reviewer":"adversarial","findings":[]}}'\n`
+    const { env } = sandbox(["cursor-agent"], recordStub)
+    const doc = makeDoc("# Plan\nUNIQUE_DOC_MARKER_9x7\n")
+    const runDir = makeRunDir()
+    // host=claude, candidates=composer -> composer route via cursor-agent.
+    const r = run(["claude", "composer", "adversarial", doc, "plan", "none", runDir], runDir, {
+      ...env,
+      PROMPT_CAPTURE: capFile,
+    })
+    expect(r.files).toContain("adversarial-composer.json")
+    expect(readFileSync(capFile, "utf8")).toContain("UNIQUE_DOC_MARKER_9x7")
+  })
 })
