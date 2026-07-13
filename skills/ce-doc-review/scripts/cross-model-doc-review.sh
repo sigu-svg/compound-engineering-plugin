@@ -153,7 +153,13 @@ RUN_DIR="${7:-}"
 [ -n "$DOC_PATH" ] && [ -f "$DOC_PATH" ] || skip "document '${DOC_PATH:-<empty>}' not readable on disk; skipping"
 : "${DOC_TYPE:=unified-plan}"
 : "${ORIGIN:=none}"
-[ -n "$RUN_DIR" ] && [ -d "$RUN_DIR" ] || skip "run-dir '${RUN_DIR:-<empty>}' is not a directory; skipping"
+[ -n "$RUN_DIR" ] || skip "run-dir not given; skipping"
+# Create the scratch run-dir rather than skipping when it doesn't exist yet:
+# ce-doc-review (unlike ce-code-review) has no pre-existing run-artifact dir, and
+# the caller is told to pass a fresh path like /tmp/compound-engineering/ce-doc-review/<run-id>/.
+# Requiring it to pre-exist would silently no-op the whole pass (no fold-in files).
+mkdir -p "$RUN_DIR" 2>/dev/null
+[ -d "$RUN_DIR" ] || skip "run-dir '$RUN_DIR' could not be created; skipping"
 command -v jq >/dev/null 2>&1 || skip "jq not installed; skipping"
 
 # Attest-or-skip (R16): an un-attestable host provider means the pass skips
@@ -210,6 +216,14 @@ case "$MAX_PEERS" in ''|*[!0-9]*) MAX_PEERS=1 ;; esac
 in_csv() { case ",$2," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 out_missing_or_invalid() { [ ! -s "$RAW_OUT" ] || ! jq -e . "$RAW_OUT" >/dev/null 2>&1; }
 
+# The cursor-agent route egresses content through Cursor even when the *model* is
+# grok (grok-via-cursor-agent). CROSS_MODEL_PEERS is an egress boundary (R19), not
+# just a model-provider filter, so the grok->cursor-agent transport is off-limits
+# under an allowlist that does not sanction Cursor. Cursor egress is sanctioned when
+# no allowlist is set, or when 'composer' (the Cursor-native provider) is allowlisted
+# -- either way the user has accepted that content may reach Cursor.
+cursor_egress_ok() { [ -z "$ALLOW" ] || in_csv composer "$ALLOW"; }
+
 # Soft size gate: peer prompt embeds the full document. Over-budget docs skip
 # cleanly (R11) rather than collapsing silently inside the provider context window.
 MAX_DOC_CHARS="${CROSS_MODEL_MAX_DOC_CHARS:-200000}"
@@ -223,7 +237,7 @@ provider_available() {
   case "$1" in
     codex)    command -v codex >/dev/null 2>&1 ;;
     claude)   command -v claude >/dev/null 2>&1 ;;
-    grok)     command -v grok >/dev/null 2>&1 || command -v cursor-agent >/dev/null 2>&1 ;;
+    grok)     command -v grok >/dev/null 2>&1 || { cursor_egress_ok && command -v cursor-agent >/dev/null 2>&1; } ;;
     composer) command -v cursor-agent >/dev/null 2>&1 ;;
     *) return 1 ;;
   esac
@@ -439,9 +453,12 @@ run_provider() {   # <provider>
     grok)
       if command -v grok >/dev/null 2>&1; then
         primary="grok-cli"
-        command -v cursor-agent >/dev/null 2>&1 && fallback="grok-cursor"
+        # Only fall back to cursor-agent when Cursor egress is sanctioned (R19).
+        if cursor_egress_ok && command -v cursor-agent >/dev/null 2>&1; then fallback="grok-cursor"; fi
       else
-        primary="grok-cursor"   # grok CLI absent; cursor-agent is the only route
+        # grok CLI absent; cursor-agent is the only route -- reached here only when
+        # provider_available already confirmed cursor_egress_ok, so egress is sanctioned.
+        primary="grok-cursor"
       fi
       ;;
   esac

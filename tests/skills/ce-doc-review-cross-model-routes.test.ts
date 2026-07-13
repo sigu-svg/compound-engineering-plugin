@@ -31,7 +31,7 @@ afterAll(() => {
 const REAL_TOOLS = [
   "bash", "sh", "jq", "python3", "date", "sed", "tr", "cat", "wc", "awk",
   "dirname", "basename", "mktemp", "env", "perl", "timeout", "gtimeout", "sleep", "rm",
-  "mv", "chmod", "cp", "printf", "kill",
+  "mv", "chmod", "cp", "printf", "kill", "mkdir",
 ]
 let resolvedTools: Array<[string, string]> | null = null
 function realToolPaths(): Array<[string, string]> {
@@ -260,6 +260,45 @@ describe("cross-model-doc-review provider selection (R7, R15, R16)", () => {
     expect(
       resolvePeers("claude", "codex,claude,grok,composer", ["claude", "grok", "cursor-agent"]),
     ).toBe("grok")
+  })
+
+  test("grok-only allowlist does NOT egress through cursor-agent when the grok CLI is absent (R19)", () => {
+    // CROSS_MODEL_PEERS=grok sanctions the grok provider but NOT Cursor. The
+    // grok->cursor-agent transport would send the full document to Cursor, so with
+    // the grok CLI absent grok is unreachable here rather than silently egressing
+    // off-allowlist through Cursor.
+    expect(
+      resolvePeers("claude", "grok,composer", ["cursor-agent"], {
+        CROSS_MODEL_PEERS: "grok",
+      }),
+    ).not.toContain("grok")
+  })
+
+  test("explicit composer allowance re-enables the grok->cursor-agent route (R19)", () => {
+    // Adding composer to the allowlist sanctions Cursor egress, so grok-via-cursor-agent
+    // is permitted again even with the grok CLI absent.
+    expect(
+      resolvePeers("claude", "grok,composer", ["cursor-agent"], {
+        CROSS_MODEL_PEERS: "grok,composer",
+      }),
+    ).toBe("grok")
+  })
+
+  test("creates a non-existent scratch run-dir instead of skipping (no silent no-op)", () => {
+    // ce-doc-review has no pre-existing run-artifact dir; a fresh caller path must be
+    // created, not treated as "not a directory" and skipped (which would silently
+    // produce zero fold-in files).
+    const { env } = sandbox(["codex"])
+    const doc = makeDoc()
+    const runDir = path.join(makeRunDir(), "fresh-run-id")
+    expect(existsSync(runDir)).toBe(false)
+    const r = run(
+      ["claude", "codex", "adversarial", doc, "plan", "none", runDir],
+      runDir,
+      { ...env, CROSS_MODEL_DRY_RUN: "1" },
+    )
+    expect(existsSync(runDir)).toBe(true)
+    expect(r.stdout).toContain("RESOLVED_PEERS: codex")
   })
 })
 
