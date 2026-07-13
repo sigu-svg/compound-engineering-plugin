@@ -265,6 +265,16 @@ describe("ce-plan post-generation menu routing", () => {
       menuPipeline!.includes("ce-doc-review has already run"),
       "the pipeline handoff must not claim the review ran after a skill_unreachable pre-entry state.",
     ).toBe(false)
+    expect(
+      /`ce-plan` has recorded the documented `skill_unreachable` envelope/.test(SKILL_BODY),
+      "ce-plan's completion guard must attribute its synthetic pre-entry envelope to ce-plan, not to ce-doc-review.",
+    ).toBe(true)
+    expect(
+      /ce-doc-review` has run in headless mode or returned the documented `skill_unreachable` envelope/.test(
+        SKILL_BODY,
+      ),
+      "a review workflow that never started cannot return ce-plan's synthetic envelope.",
+    ).toBe(false)
   })
 
   test("Codex goal handoff is capability-based and menu-cap aware", () => {
