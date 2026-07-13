@@ -74,7 +74,10 @@ as specified.
    that frames it as an **independent cross-model review**, names the concrete
    **model + reasoning** (not just a provider key), and — for a cursor-agent route
    — names the **route** so Grok-4.5-via-cursor-agent vs Composer vs
-   Grok-4.5-via-grok-CLI is unambiguous, and names the document-content egress.
+   Grok-4.5-via-grok-CLI is unambiguous, and names the document-content egress
+   **scope** — and when the front-loaded provider falls through to a fallback, the
+   **actual** provider (read from the `<lens>-<provider>.json` fold-in filename) is
+   disclosed, not just the announced primary.
    Headless mode → no user-facing prose about the pass (the script still emits the
    stderr egress audit log).
 
