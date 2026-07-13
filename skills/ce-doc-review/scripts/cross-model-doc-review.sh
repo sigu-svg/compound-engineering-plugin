@@ -168,7 +168,8 @@ case "$REVIEWER_NAME" in
   security-lens) PERSONA_FILE="security-lens-reviewer" ;;
   adversarial)   PERSONA_FILE="adversarial-document-reviewer" ;;
   product-lens)  PERSONA_FILE="product-lens-reviewer" ;;
-  *) skip "reviewer-name '$REVIEWER_NAME' is not a cross-model trio lens (want security-lens|adversarial|product-lens); skipping" ;;
+  whole-doc)     PERSONA_FILE="whole-doc-reviewer" ;;   # broad whole-document sweep (R20/U9); embeds the full doc, no in-process twin
+  *) skip "reviewer-name '$REVIEWER_NAME' is not a cross-model reviewer (want security-lens|adversarial|product-lens|whole-doc); skipping" ;;
 esac
 
 # --- self-locate skill root + canonical sibling files ----------------------

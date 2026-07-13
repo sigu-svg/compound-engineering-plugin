@@ -85,7 +85,16 @@ as specified.
    output file), assert the review completes with all in-process findings and
    notes "cross-model pass: not run" in Coverage on an interactive host; no error.
 
+10. **Whole-document sweep + trio slicing (R20, KTD6, KTD3).** When the pass runs,
+    assert exactly **one** additional `whole-doc` call is launched (not one per
+    lens) on the **full** document with the same resolved provider, folds in as
+    `whole-doc-<provider>`, and a sweep finding sharing a fingerprint with *any*
+    in-process finding promotes one anchor step (no in-process twin needed); the
+    sweep is never `safe_auto`. Assert that on a **unified plan** the trio peers
+    receive their in-process twin's slice (e.g. product-lens/adversarial get the
+    Product Contract), not the full document.
+
 ## Pass criteria
 
-All nine cases pass on the current on-disk source, and case 2 confirms the
+All ten cases pass on the current on-disk source, and case 2 confirms the
 conditional cost profile (no peer spawn on a routine validated plan).

@@ -346,6 +346,20 @@ describe("cross-model-doc-review normalization (R18, KTD5)", () => {
     expect(readdirSync(runDir).filter((f) => f.endsWith(".raw.json"))).toEqual([])
   })
 
+  test("the whole-doc sweep reviewer-name is accepted and normalizes to whole-doc-<provider>", () => {
+    // R20/U9: the broad whole-document sweep runs under reviewer-name `whole-doc`.
+    const stub =
+      `#!/bin/sh\ncat >/dev/null\nprintf '%s' '{"structured_output":{"reviewer":"whole-doc","findings":[{"section":"X","title":"t"}]}}'\n`
+    const { env } = sandbox(["claude"], stub)
+    const doc = makeDoc()
+    const runDir = makeRunDir()
+    const r = run(["codex", "claude", "whole-doc", doc, "unified-plan", "none", runDir], runDir, env)
+    expect(r.code).toBe(0)
+    expect(r.files).toContain("whole-doc-claude.json")
+    const out = JSON.parse(readFileSync(path.join(runDir, "whole-doc-claude.json"), "utf8"))
+    expect(out.reviewer).toBe("whole-doc-claude")
+  })
+
   test("skips cleanly when the document exceeds CROSS_MODEL_MAX_DOC_CHARS", () => {
     const { env } = sandbox(["claude"], claudeStub)
     const runDir = makeRunDir()
