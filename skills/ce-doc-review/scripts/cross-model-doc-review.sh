@@ -65,6 +65,12 @@
 
 set -uo pipefail
 
+# Survive SIGHUP when the orchestrator backgrounds this script and the parent
+# shell exits (common on Cursor/Codex Bash tools). Without this, a detached
+# codex process group can still write raw `-o` JSON while this script dies
+# before normalize — leaving fold-in files with a bare `reviewer` field.
+trap '' HUP
+
 log()  { printf '[cross-model-doc] %s\n' "$*" >&2; }
 skip() { log "$*"; exit 0; }   # non-blocking: announce reason, exit clean, no output
 
@@ -80,15 +86,17 @@ M_COMPOSER="composer-2.5-fast" # cursor-agent composer (no high tier; -fast is t
 
 # --- adapter argv (single source of truth for route flags) -----------------
 # Emits the CLI + flags one token per line. Read-only, no-prompt, tool-less, and
-# high-reasoning per R17. RUN_DIR / OUT / PROMPT_FILE / SCHEMA_REF are resolved by
-# the caller (placeholders in --emit-adapter mode). NEVER emit: codex without
+# high-reasoning per R17. RUN_DIR / RAW_OUT / PROMPT_FILE / SCHEMA_REF are resolved
+# by the caller (placeholders in --emit-adapter mode). Peer routes write to RAW_OUT
+# only; the final fold-in file (OUT) is published after normalize so an orphaned
+# peer process cannot leave an un-normalized return. NEVER emit: codex without
 # `-s read-only`; grok `--always-approve` / `--permission-mode bypassPermissions`;
 # cursor-agent `-f` / `--force` / `--yolo`.
 adapter_argv() {
   case "$1" in
     codex)
       printf '%s\0' codex exec - -C "$RUN_DIR" --skip-git-repo-check -s read-only \
-        -o "$OUT" -m "$M_CODEX" -c 'model_reasoning_effort="high"' -c 'hide_agent_reasoning=false'
+        -o "$RAW_OUT" -m "$M_CODEX" -c 'model_reasoning_effort="high"' -c 'hide_agent_reasoning=false'
       ;;
     claude)
       # --tools "" disables ALL built-in tools (allowlist deny-all, no denylist gap
@@ -120,7 +128,8 @@ adapter_argv() {
 
 # --- --emit-adapter <route>: print the argv, no model call, no side effects --
 if [ "${1:-}" = "--emit-adapter" ]; then
-  RUN_DIR="<run-dir>"; OUT="<run-dir>/<lens>-<provider>.json"
+  RUN_DIR="<run-dir>"; RAW_OUT="<run-dir>/<lens>-<provider>.raw.json"
+  OUT="<run-dir>/<lens>-<provider>.json"
   PROMPT_FILE="<prompt-file>"; SCHEMA_REF="<schema>"
   route="${2:-}"
   # adapter_argv emits NUL-delimited argv (can't be captured in a shell var), so
@@ -189,7 +198,16 @@ case "$MAX_PEERS" in ''|*[!0-9]*) MAX_PEERS=1 ;; esac
 [ "$MAX_PEERS" -gt 2 ] && MAX_PEERS=2
 
 in_csv() { case ",$2," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
-out_missing_or_invalid() { [ ! -s "$OUT" ] || ! jq -e . "$OUT" >/dev/null 2>&1; }
+out_missing_or_invalid() { [ ! -s "$RAW_OUT" ] || ! jq -e . "$RAW_OUT" >/dev/null 2>&1; }
+
+# Soft size gate: peer prompt embeds the full document. Over-budget docs skip
+# cleanly (R11) rather than collapsing silently inside the provider context window.
+MAX_DOC_CHARS="${CROSS_MODEL_MAX_DOC_CHARS:-200000}"
+case "$MAX_DOC_CHARS" in ''|*[!0-9]*) MAX_DOC_CHARS=200000 ;; esac
+DOC_CHARS="$(wc -c <"$DOC_PATH" | tr -d '[:space:]')"
+if [ "$DOC_CHARS" -gt "$MAX_DOC_CHARS" ]; then
+  skip "document is ${DOC_CHARS} bytes (limit ${MAX_DOC_CHARS}); skipping cross-model pass rather than truncating"
+fi
 
 provider_available() {
   case "$1" in
@@ -253,6 +271,9 @@ fi
 PROMPT_FILE="$(mktemp "${TMPDIR:-/tmp}/xmodel-doc-prompt-XXXXXX")"
 PEERLOG="$(mktemp "${TMPDIR:-/tmp}/xmodel-doc-log-XXXXXX")"
 trap 'rm -f "$PROMPT_FILE" "$PEERLOG"' EXIT
+# Basename only in the peer prompt: content is already embedded (KTD3). An absolute
+# path would give cursor-agent residual-Read a repo coordinate to walk from.
+DOC_BASENAME="$(basename "$DOC_PATH")"
 {
   cat "$PERSONA"
   printf '\n\n---\n\n'
@@ -262,7 +283,7 @@ trap 'rm -f "$PROMPT_FILE" "$PEERLOG"' EXIT
   printf '\n\nSet the top-level "reviewer" field to "%s" (it will be namespaced to the peer provider on fold-in).\n' "$REVIEWER_NAME"
   printf '\n<review-context>\n'
   printf 'Document type: %s\n' "$DOC_TYPE"
-  printf 'Document path: %s\n' "$DOC_PATH"
+  printf 'Document path: %s\n' "$DOC_BASENAME"
   printf 'Origin: %s\n\n' "$ORIGIN"
   printf '<prior-decisions>\nRound 1 — no prior decisions.\n</prior-decisions>\n\n'
   printf 'Document content:\n'
@@ -297,7 +318,7 @@ build_cmd() {
   while IFS= read -r -d '' tok; do CMD+=("$tok"); done < <(adapter_argv "$1")
 }
 
-run_codex_cmd() {   # CMD already built for the codex route; streams to PEERLOG, writes -o OUT
+run_codex_cmd() {   # CMD already built for the codex route; streams to PEERLOG, writes -o RAW_OUT
   local prev; case "$-" in *m*) prev=1;; *) prev=0;; esac
   set -m
   "${CMD[@]}" < "$PROMPT_FILE" > "$PEERLOG" 2>&1 &
@@ -362,10 +383,10 @@ parse_structured() {   # <logfile> <outfile>
   recover_findings_json "$1" "$2"
 }
 
-# Run one route for a provider; leaves a schema-shaped (pre-normalization) $OUT on success.
+# Run one route for a provider; leaves a schema-shaped (pre-normalization) $RAW_OUT on success.
 attempt_route() {   # <provider> <route>
   local provider="$1" route="$2" note
-  : > "$PEERLOG"; rm -f "$OUT"
+  : > "$PEERLOG"; rm -f "$RAW_OUT" "$OUT"
   build_cmd "$route"
   case "$route" in
     codex)       note="$M_CODEX (effort high)" ;;
@@ -379,16 +400,16 @@ attempt_route() {   # <provider> <route>
     codex)
       run_codex_cmd
       if out_missing_or_invalid; then
-        recover_findings_json "$PEERLOG" "$OUT" && log "recovered codex JSON from stdout (-o file unavailable)"
+        recover_findings_json "$PEERLOG" "$RAW_OUT" && log "recovered codex JSON from stdout (-o file unavailable)"
       fi
       ;;
-    grok-cli)    run_timeout_cmd ""            ; parse_structured "$PEERLOG" "$OUT" ;;   # grok reads --prompt-file
-    claude)      run_timeout_cmd "$PROMPT_FILE"; parse_structured "$PEERLOG" "$OUT" ;;   # claude -p reads stdin
+    grok-cli)    run_timeout_cmd ""            ; parse_structured "$PEERLOG" "$RAW_OUT" ;;   # grok reads --prompt-file
+    claude)      run_timeout_cmd "$PROMPT_FILE"; parse_structured "$PEERLOG" "$RAW_OUT" ;;   # claude -p reads stdin
     grok-cursor|composer)
       # cursor-agent takes the prompt as a positional argument (agent [prompt...]),
       # not via stdin, so append the composed prompt as the final argv element.
       CMD+=("$(cat "$PROMPT_FILE")")
-      run_timeout_cmd ""; parse_structured "$PEERLOG" "$OUT" ;;
+      run_timeout_cmd ""; parse_structured "$PEERLOG" "$RAW_OUT" ;;
   esac
 }
 
@@ -396,6 +417,7 @@ attempt_route() {   # <provider> <route>
 run_provider() {   # <provider>
   local provider="$1" primary fallback=""
   OUT="$RUN_DIR/$REVIEWER_NAME-$provider.json"
+  RAW_OUT="$RUN_DIR/$REVIEWER_NAME-$provider.raw.json"
   case "$provider" in
     codex)    primary="codex" ;;
     claude)   primary="claude" ;;
@@ -425,7 +447,10 @@ run_provider() {   # <provider>
   # only in synthesis prose) means a peer cannot self-authorize a Phase 4 auto-apply
   # regardless of what it returns. gated_auto preserves the peer's proposed fix but
   # routes it through user confirmation.
-  if [ -s "$OUT" ]; then
+  # Publish ONLY the normalized OUT. RAW_OUT is never a fold-in artifact — if this
+  # script dies before normalize (orphaned launch), synthesis finds no .json.
+  rm -f "$OUT"
+  if [ -s "$RAW_OUT" ]; then
     _norm="$(mktemp "${TMPDIR:-/tmp}/xmodel-doc-norm-XXXXXX")"
     if jq --arg r "$REVIEWER_NAME-$provider" \
          'if (.findings|type)=="array"
@@ -434,14 +459,19 @@ run_provider() {   # <provider>
                  residual_risks: (.residual_risks // []),
                  deferred_questions: (.deferred_questions // []) }
           else empty end' \
-         "$OUT" > "$_norm" 2>/dev/null; then mv "$_norm" "$OUT"; else rm -f "$_norm"; fi
+         "$RAW_OUT" > "$_norm" 2>/dev/null; then
+      mv "$_norm" "$OUT"
+    else
+      rm -f "$_norm"
+    fi
+    rm -f "$RAW_OUT"
   fi
   if [ -s "$OUT" ] && jq -e '(.reviewer|type=="string") and (.findings|type=="array") and (.residual_risks|type=="array") and (.deferred_questions|type=="array")' "$OUT" >/dev/null 2>&1; then
     n="$(jq '.findings | length' "$OUT" 2>/dev/null || echo '?')"
     log "wrote $n finding(s) to $OUT (reviewer $REVIEWER_NAME-$provider)"
   else
     log "provider $provider produced no usable schema-shaped output; skipping fold-in"
-    rm -f "$OUT"
+    rm -f "$OUT" "$RAW_OUT"
   fi
 }
 

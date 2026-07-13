@@ -70,10 +70,13 @@ as specified.
    (nor silently applied by 3.7) — it caps at `gated_auto` unless an in-process
    reviewer independently raised the same finding (merged twin in 3.3).
 
-8. **Announce by mode (R12).** Interactive host, default mode → a prominent
-   independent-provider line naming the resolved peer appears with the team
-   announce. Headless mode → no user-facing prose about the pass (the script
-   still emits the stderr egress audit log).
+8. **Announce by mode (R12).** Interactive host, default mode → a prominent line
+   that frames it as an **independent cross-model review**, names the concrete
+   **model + reasoning** (not just a provider key), and — for a cursor-agent route
+   — names the **route** so Grok-4.5-via-cursor-agent vs Composer vs
+   Grok-4.5-via-grok-CLI is unambiguous, and names the document-content egress.
+   Headless mode → no user-facing prose about the pass (the script still emits the
+   stderr egress audit log).
 
 9. **Non-blocking (R11).** With the peer CLI absent/unauthed (script writes no
    output file), assert the review completes with all in-process findings and

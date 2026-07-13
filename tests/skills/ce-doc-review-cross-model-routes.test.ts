@@ -30,7 +30,7 @@ afterAll(() => {
 // lookup would otherwise spawn a `command -v` subprocess per tool per call.
 const REAL_TOOLS = [
   "bash", "sh", "jq", "python3", "date", "sed", "tr", "cat", "wc", "awk",
-  "dirname", "mktemp", "env", "perl", "timeout", "gtimeout", "sleep", "rm",
+  "dirname", "basename", "mktemp", "env", "perl", "timeout", "gtimeout", "sleep", "rm",
   "mv", "chmod", "cp", "printf", "kill",
 ]
 let resolvedTools: Array<[string, string]> | null = null
@@ -342,6 +342,22 @@ describe("cross-model-doc-review normalization (R18, KTD5)", () => {
     )
     expect(out.findings[0].autofix_class).toBe("gated_auto")
     expect(out.findings[0].confidence).toBe(100)
+    // RAW_OUT must not remain as a fold-in artifact after normalize publishes OUT.
+    expect(readdirSync(runDir).filter((f) => f.endsWith(".raw.json"))).toEqual([])
+  })
+
+  test("skips cleanly when the document exceeds CROSS_MODEL_MAX_DOC_CHARS", () => {
+    const { env } = sandbox(["claude"], claudeStub)
+    const runDir = makeRunDir()
+    const doc = path.join(runDir, "huge.md")
+    writeFileSync(doc, "x".repeat(50_000))
+    const r = run(["codex", "claude", "adversarial", doc, "plan", "none", runDir], runDir, {
+      ...env,
+      CROSS_MODEL_MAX_DOC_CHARS: "1000",
+    })
+    expect(r.code).toBe(0)
+    expect(r.files.filter((f) => f.endsWith(".json"))).toEqual([])
+    expect(r.stderr).toMatch(/bytes \(limit 1000\)/)
   })
 })
 
