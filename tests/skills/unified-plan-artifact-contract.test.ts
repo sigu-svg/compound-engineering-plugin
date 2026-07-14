@@ -6,6 +6,14 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8")
 }
 
+function region(doc: string, startMarker: string, endMarker: string): string {
+  const start = doc.indexOf(startMarker)
+  expect(start).toBeGreaterThan(-1)
+  const end = doc.indexOf(endMarker, start)
+  expect(end).toBeGreaterThan(start)
+  return doc.slice(start, end)
+}
+
 const planSections = readRepoFile(
   "skills/ce-plan/references/plan-sections.md",
 )
@@ -34,6 +42,16 @@ const docReviewTemplate = readRepoFile(
   "skills/ce-doc-review/references/subagent-template.md",
 )
 const codeReview = readRepoFile("skills/ce-code-review/SKILL.md")
+const ceWorkShipping = readRepoFile(
+  "skills/ce-work/references/shipping-workflow.md",
+)
+const docReviewSynthesis = readRepoFile(
+  "skills/ce-doc-review/references/synthesis-and-presentation.md",
+)
+const simplifyCode = readRepoFile("skills/ce-simplify-code/SKILL.md")
+const prDescriptionWriting = readRepoFile(
+  "skills/ce-commit-push-pr/references/pr-description-writing.md",
+)
 const proof = readRepoFile("skills/ce-proof/SKILL.md")
 const ideate = readRepoFile("skills/ce-ideate/references/post-ideation-workflow.md")
 const agents = readRepoFile("AGENTS.md")
@@ -301,11 +319,11 @@ describe("unified plan artifact contract", () => {
     // auto-resolve the resume choice in pipeline mode.
     const phaseStart = planSkill.indexOf("#### 0.1 Resume Existing Plan Work")
     expect(phaseStart).toBeGreaterThan(-1)
-    const region = planSkill.slice(phaseStart, phaseStart + 1600)
-    expect(/requirements-only unified plan is not a resume target/i.test(region)).toBe(true)
-    expect(/do \*?\*?not\*?\*? fire the update-or-create confirm/i.test(region)).toBe(true)
-    expect(/Fall through to Phase 0\.2/i.test(region)).toBe(true)
-    expect(/pipeline mode the resume choice is made automatically|never prompted/i.test(region)).toBe(true)
+    const resumeRegion = planSkill.slice(phaseStart, phaseStart + 1600)
+    expect(/requirements-only unified plan is not a resume target/i.test(resumeRegion)).toBe(true)
+    expect(/do \*?\*?not\*?\*? fire the update-or-create confirm/i.test(resumeRegion)).toBe(true)
+    expect(/Fall through to Phase 0\.2/i.test(resumeRegion)).toBe(true)
+    expect(/pipeline mode the resume choice is made automatically|never prompted/i.test(resumeRegion)).toBe(true)
   })
 
   test("format conversion: a requirements-only artifact with an implementation-ready sibling is superseded", () => {
@@ -381,5 +399,124 @@ describe("unified plan artifact contract", () => {
     expect(ceWorkEngines).toContain("standalone_shipping_skipped: true")
     // No-PR is now structural (return-to-caller only); standalone defers to repo/user conventions.
     expect(ceWorkEngines).toMatch(/must not open any PR/i)
+  })
+})
+
+describe("session-settled decision contract", () => {
+  test("plan-sections defines the session-settled annotation stem, closed two-class enum, and strip sanction", () => {
+    const annotation = region(
+      planSections,
+      "**Session-settled annotations on KTDs.**",
+      "**Group Requirements by concern",
+    )
+    expect(annotation).toContain("session-settled:")
+    expect(annotation).toContain("Exactly two classes:")
+    expect(annotation).toContain("`user-directed`")
+    expect(annotation).toContain("`user-approved`")
+    expect(annotation).toContain("review passes must not strip it")
+    // Enum closure: the contract admits no third provenance class.
+    expect(annotation).not.toContain("evidence-settled")
+    expect(annotation).not.toContain("agent-settled")
+  })
+
+  test("ce-plan loads settled-decisions.md, keeps the stem live in Phase 2, and emits the pipeline blocked token", () => {
+    expect(planSkill).toContain("Read `references/settled-decisions.md`")
+    const phase2 = region(
+      planSkill,
+      "### Phase 2: Resolve Planning Questions",
+      "### Phase 3:",
+    )
+    expect(phase2).toContain("session-settled:")
+    expect(planSkill).toContain("settled-decision-invalidated")
+  })
+
+  test("ce-brainstorm loads settled-decisions.md and annotates Key Decisions with the stem", () => {
+    expect(brainstormSkill).toContain("Read `references/settled-decisions.md`")
+    expect(brainstormSkill).toContain(
+      "Key Decisions section carrying their `session-settled:` annotation",
+    )
+  })
+
+  test("lfg brief carries the four required fields, recognizes the blocked token, and retries the brief verbatim", () => {
+    const step1 = region(
+      lfg,
+      "1. Invoke the `ce-plan` skill",
+      "2. Invoke the `ce-work` skill",
+    )
+    for (const field of [
+      "the decision",
+      "provenance class",
+      "rejected alternative",
+      "one-line reason",
+    ]) {
+      expect(step1).toContain(field)
+    }
+    expect(step1).toContain("`user-directed`")
+    expect(step1).toContain("settled-decision-invalidated")
+    expect(step1).toContain("reuses the composed brief verbatim")
+  })
+
+  test("lfg threads settled_conflict findings through both step 4 and step 6", () => {
+    const step4 = region(
+      lfg,
+      "4. Invoke the `ce-code-review` skill",
+      "5. **Apply and persist review fixes**",
+    )
+    expect(step4).toContain("`settled_conflict`")
+    const step6 = region(
+      lfg,
+      "6. **Autonomous residual handoff**",
+      "7. Invoke the `ce-test-browser` skill",
+    )
+    expect(step6).toContain("`settled_conflict`")
+  })
+
+  test("ce-work envelope reports settled conflicts; shipping tail treats invalidation as a blocker", () => {
+    const returnToCaller = region(ceWork, "## Return-to-Caller Mode", "## Key Principles")
+    expect(returnToCaller).toContain("`settled_decision_conflicts`")
+    expect(ceWorkShipping).toContain(
+      "never auto-accepted as a residual; it is a blocker",
+    )
+  })
+
+  test("ce-code-review routes settlement conflicts advisory+human, never demotes defects, and keeps stamps report-only in 5c", () => {
+    const stage5 = region(codeReview, "### Stage 5: Merge findings", "### Stage 5b")
+    expect(stage5).toContain("stamp it with `settled_conflict:")
+    expect(stage5).toContain("carries the `settled_conflict` stamp")
+    expect(stage5).toContain("autofix_class: advisory` + `owner: human")
+    // Negative boundary: defects inside a settled approach are not demoted.
+    expect(stage5).toContain("keeps its full severity")
+    expect(stage5).toContain("**never demoted**")
+    const stage5c = region(
+      codeReview,
+      "### Stage 5c: Act on findings",
+      "### Stage 6",
+    )
+    expect(stage5c).toContain(
+      "`settled_conflict`-stamped preference findings (Stage 5 step 6c) stay report-only even in interactive apply",
+    )
+  })
+
+  test("PR description Step C carries the session-settled provenance element", () => {
+    const stepC = region(
+      prDescriptionWriting,
+      "## Step C: Assemble the body",
+      "## Step D",
+    )
+    expect(stepC).toContain("**Session-settled provenance:**")
+    expect(stepC).toContain("session-settled:")
+  })
+
+  test("ce-doc-review threads settled KTDs through the {settled_ktds} slot and protects the annotation", () => {
+    expect(docReview).toContain("| `{settled_ktds}` |")
+    expect(docReviewTemplate).toContain("Settled decisions: {settled_ktds}")
+    expect(docReviewSynthesis).toContain(
+      "must never remove or reword a `session-settled:` annotation",
+    )
+  })
+
+  test("ce-simplify-code honors session-settled structure pins", () => {
+    expect(simplifyCode).toContain("structure-pin constraint")
+    expect(simplifyCode).toContain("session-settled:")
   })
 })
