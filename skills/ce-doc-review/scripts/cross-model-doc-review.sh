@@ -433,6 +433,9 @@ build_cmd() {
 _HEARTBEAT_PID=""
 start_heartbeat() {
   local every="${CROSS_MODEL_HEARTBEAT_SECS:-60}"
+  # Floor to 1s: a non-numeric or 0 value would make `sleep` return instantly and
+  # spin the loop, flooding out.log into the runner's byte cap.
+  case "$every" in ''|*[!0-9]*) every=60 ;; esac; [ "$every" -lt 1 ] && every=1
   ( local t0 n; t0="$(date +%s)"
     while :; do sleep "$every"; n="$(date +%s)"; log "peer alive ($(( n - t0 ))s elapsed)"; done ) &
   _HEARTBEAT_PID=$!
