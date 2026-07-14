@@ -105,18 +105,32 @@ MODEL_ACTUAL="unverified"
 extract_model_receipt() {   # <route>; reads the envelope in $PEERLOG, sets MODEL_ACTUAL
   MODEL_ACTUAL="unverified"
   [ "$1" = "claude" ] || return 0
-  local requested actual prefix
+  local requested actual prefix matched
   requested="$(route_model claude)"
+  prefix="$(expected_model_prefix "$requested")"
+  # jq `keys` is sorted, so keys[0] is the alphabetically-first model, not
+  # necessarily the one that served the run (a multi-key envelope can also carry
+  # an auxiliary model's usage). Prefer a key matching the requested family's
+  # expected prefix; fall back to the first key only when none matches, and warn
+  # only then. A missing/unparseable envelope stays "unverified" (never the
+  # requested value).
+  matched=""
+  if [ -n "$prefix" ]; then
+    # first modelUsage key matching the expected family prefix (jq-native, no
+    # external `head`: the route sandbox may not carry coreutils on PATH).
+    matched="$(jq -r --arg p "$prefix" 'first((.modelUsage // {} | keys[] | select(startswith($p)))) // empty' "$PEERLOG" 2>/dev/null)"
+  fi
+  if [ -n "$matched" ]; then
+    MODEL_ACTUAL="$matched"
+    return 0
+  fi
   actual="$(jq -r '.modelUsage // empty | keys[0] // empty' "$PEERLOG" 2>/dev/null)"
   if [ -z "$actual" ]; then
     log "model receipt absent/unparseable on claude route; recording unverified"
     return 0
   fi
   MODEL_ACTUAL="$actual"
-  prefix="$(expected_model_prefix "$requested")"
-  if [ -z "$prefix" ] || [ "${actual#"$prefix"}" = "$actual" ]; then
-    log "WARNING: model mismatch - requested $requested, backend served $actual; reconcile must surface this"
-  fi
+  log "WARNING: model mismatch - requested $requested, backend served $actual; reconcile must surface this"
 }
 
 # --- adapter argv (single source of truth for route flags) -----------------
@@ -343,6 +357,27 @@ compose_prompt_embedded() {
   cat "$DIFF_APPENDIX" >> "$PROMPT_FILE"
 }
 
+# --- liveness heartbeat -----------------------------------------------------
+# The peer CLI streams into $PEERLOG (private), so nothing reaches this script's
+# own stdout/stderr during a long model call. An outer supervisor that watches
+# THIS process's output for liveness (the peer-job runner's out.log byte-growth
+# idle window) would mistake a healthy multi-minute run for a wedge. A background
+# writer emits one stderr line every CROSS_MODEL_HEARTBEAT_SECS (default 60s) so
+# that liveness is visible; it is torn down as soon as the foreground wait returns,
+# so it adds no latency to a fast run. Keep this block byte-identical across
+# cross-model-adversarial-review.sh and cross-model-doc-review.sh (kernel parity).
+_HEARTBEAT_PID=""
+start_heartbeat() {
+  local every="${CROSS_MODEL_HEARTBEAT_SECS:-60}"
+  ( local t0 n; t0="$(date +%s)"
+    while :; do sleep "$every"; n="$(date +%s)"; log "peer alive ($(( n - t0 ))s elapsed)"; done ) &
+  _HEARTBEAT_PID=$!
+}
+stop_heartbeat() {
+  [ -n "$_HEARTBEAT_PID" ] && kill "$_HEARTBEAT_PID" 2>/dev/null
+  _HEARTBEAT_PID=""
+}
+
 run_codex_cmd() {
   local prev; case "$-" in *m*) prev=1;; *) prev=0;; esac
   set -m
@@ -351,6 +386,7 @@ run_codex_cmd() {
   local pid=$!
   ACTIVE_PEER_PID="$pid"
   [ "$prev" = 0 ] && set +m
+  start_heartbeat
   local start last=-1 lastchg now size
   start="$(date +%s)"; lastchg="$start"
   while kill -0 "$pid" 2>/dev/null; do
@@ -364,6 +400,7 @@ run_codex_cmd() {
     fi
   done
   wait "$pid" 2>/dev/null || true
+  stop_heartbeat
   ACTIVE_PEER_PID=""
 }
 
@@ -379,7 +416,9 @@ run_timeout_cmd() {
   local pid=$!
   ACTIVE_PEER_PID="$pid"
   [ "$prev" = 0 ] && set +m
+  start_heartbeat
   wait "$pid" 2>/dev/null || log "peer exited non-zero or timed out"
+  stop_heartbeat
   ACTIVE_PEER_PID=""
 }
 

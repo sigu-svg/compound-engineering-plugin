@@ -142,5 +142,24 @@ class CollisionClaim(unittest.TestCase):
                 MOD.claim_job_dir(jobs_root)
 
 
+class SafeTokenAllDots(unittest.TestCase):
+    def test_all_dot_tokens_rejected_but_dotted_names_allowed(self):
+        # "." / ".." / "..." pass the charset regex yet are path components that
+        # escape the jobs root; they must be rejected outright.
+        self.assertFalse(MOD._is_safe_token("."))
+        self.assertFalse(MOD._is_safe_token(".."))
+        self.assertFalse(MOD._is_safe_token("..."))
+        self.assertTrue(MOD._is_safe_token("a.b"))
+
+    def test_resolve_job_dir_rejects_dotdot(self):
+        # With a populated <root>/<skill>/<run>/jobs tree, a glob for ".." would
+        # match the run dir itself — resolve must raise before globbing.
+        root = tempfile.mkdtemp(prefix="peer-resolve-")
+        os.makedirs(os.path.join(root, "ce-doc-review", "run1", "jobs"))
+        with mock.patch.dict(os.environ, {"CE_PEER_JOBS_ROOT": root}):
+            with self.assertRaises(MOD.RunnerError):
+                MOD.resolve_job_dir("..")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

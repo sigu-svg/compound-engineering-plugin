@@ -90,7 +90,16 @@ import sys
 import tempfile
 import time
 
+# Identifier charset for --skill/--run-id/--label and bare job refs. The dot is
+# allowed (model/date tokens use it) but an all-dot value (".", "..") would be a
+# path component that escapes the jobs root, so it is rejected separately below.
 SAFE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _is_safe_token(value: str) -> bool:
+    return bool(SAFE_RE.match(value)) and value.strip(".") != ""
+
+
 TERMINAL_STATES = ("done", "failed", "timeout", "died-without-result")
 DEFAULT_ROOT = "/tmp/compound-engineering"
 O_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
@@ -101,8 +110,10 @@ META_READ_CAP = 64 * 1024
 
 EXIT_CODES_DOC = """\
 exit codes:
-  0  success (start/status/wait; result of a done job; reap, incl. the
-     safe no-op on an already-terminal job)
+  0  the command itself succeeded. For status/wait this means the query ran;
+     it says nothing about job outcomes — parse stdout (or --json) for states.
+     For `result` it means a done job's artifact (or a --path file) was emitted;
+     for reap it includes the safe no-op on an already-terminal job.
   1  runtime error (preflight failure, unknown job, detach failure)
   2  usage error; for `result`: the job is still running
   3  for `result`: job settled but not done (failed / timeout /
@@ -279,7 +290,7 @@ def resolve_job_dir(ref: str) -> str:
         if os.path.isdir(p):
             return p
         raise RunnerError(f"no such job dir: {ref}")
-    if not SAFE_RE.match(ref):
+    if not _is_safe_token(ref):
         raise RunnerError(f"invalid job ref: {ref!r}")
     matches = sorted(glob.glob(os.path.join(jobs_root_base(), "*", "*", "jobs", ref)))
     if not matches:
@@ -376,6 +387,10 @@ def kill_tree(root_pid: int, grace: float) -> bool:
     falling back to a deepest-first tree walk; grace, then KILL survivors."""
     if not _pid_alive(root_pid):
         return False
+    # Snapshot the descendant set BEFORE any KILL: once the group leader is
+    # reaped its children reparent to init and drop out of the tree, so a set
+    # enumerated after the kill would miss them and leak orphans.
+    survivors = _descendants_deepest_first(root_pid)
     _signal_group_or_tree(root_pid, signal.SIGTERM)
     deadline = time.monotonic() + grace
     while time.monotonic() < deadline:
@@ -383,10 +398,9 @@ def kill_tree(root_pid: int, grace: float) -> bool:
             break
         time.sleep(0.1)
     _killpg_quiet(root_pid, signal.SIGKILL)
-    if _pid_alive(root_pid):
-        for pid in _descendants_deepest_first(root_pid):
-            _kill_quiet(pid, signal.SIGKILL)
-        _kill_quiet(root_pid, signal.SIGKILL)
+    for pid in survivors:
+        _kill_quiet(pid, signal.SIGKILL)
+    _kill_quiet(root_pid, signal.SIGKILL)
     return True
 
 
@@ -624,10 +638,10 @@ def sweep_stale_runs(skill_dir: str, keep: str) -> None:
 
 def cmd_start(args, worker_argv) -> int:
     for flag, value in (("--skill", args.skill), ("--run-id", args.run_id)):
-        if not SAFE_RE.match(value):
-            raise RunnerError(f"{flag} must match [A-Za-z0-9._-]+ (got {value!r})")
-    if args.label is not None and not SAFE_RE.match(args.label):
-        raise RunnerError(f"--label must match [A-Za-z0-9._-]+ (got {args.label!r})")
+        if not _is_safe_token(value):
+            raise RunnerError(f"{flag} must match [A-Za-z0-9._-]+ and not be all dots (got {value!r})")
+    if args.label is not None and not _is_safe_token(args.label):
+        raise RunnerError(f"--label must match [A-Za-z0-9._-]+ and not be all dots (got {args.label!r})")
     if not worker_argv:
         raise RunnerError("no worker argv; place it after `--`")
 
@@ -737,7 +751,34 @@ def cmd_wait(args) -> int:
     return 0
 
 
+def _emit_bytes(data: bytes) -> None:
+    buffer = getattr(sys.stdout, "buffer", None)
+    if buffer is not None:
+        buffer.write(data)
+        buffer.flush()
+    else:
+        sys.stdout.write(data.decode("utf-8", "replace"))
+
+
 def cmd_result(args) -> int:
+    if not getattr(args, "path", None) and not args.job:
+        sys.stderr.write("peer-job-runner: result needs a job id or --path FILE\n")
+        return 2
+    if getattr(args, "path", None):
+        # Verified read of an arbitrary artifact: same fd-ownership check and
+        # bounded read as job results. Exists because fold-in filenames can embed
+        # values unknown at start time (so no --result-path was declared), yet the
+        # consumer must never read a predictable /tmp path unchecked.
+        try:
+            data = read_owned(os.path.abspath(args.path), cfg()["result_max"])
+        except Unreadable as exc:
+            sys.stderr.write(f"peer-job-runner: unreadable: {exc}\n")
+            return 4
+        except OSError as exc:
+            sys.stderr.write(f"peer-job-runner: file missing or unreadable: {exc}\n")
+            return 3
+        _emit_bytes(data)
+        return 0
     job_dir = resolve_job_dir(args.job)
     state = job_state(job_dir)
     if state == "unreadable":
@@ -772,12 +813,7 @@ def cmd_result(args) -> int:
     except OSError as exc:
         sys.stderr.write(f"peer-job-runner: result missing or unreadable: {exc}\n")
         return 3
-    buffer = getattr(sys.stdout, "buffer", None)
-    if buffer is not None:
-        buffer.write(data)
-        buffer.flush()
-    else:
-        sys.stdout.write(data.decode("utf-8", "replace"))
+    _emit_bytes(data)
     return 0
 
 
@@ -868,7 +904,12 @@ def build_parser() -> argparse.ArgumentParser:
         "result",
         help="emit a done job's artifact (exit: 0 done, 2 running, 3 other, 4 unreadable)",
     )
-    p_result.add_argument("job")
+    p_result.add_argument("job", nargs="?", default=None)
+    p_result.add_argument(
+        "--path",
+        default=None,
+        help="ownership-checked bounded read of this file instead of a job's declared result",
+    )
 
     p_reap = sub.add_parser(
         "reap", help="terminate a running job now; no-op if already terminal"

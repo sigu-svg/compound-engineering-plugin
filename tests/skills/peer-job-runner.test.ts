@@ -403,6 +403,31 @@ describe("peer-job-runner lifecycle", () => {
     expect(runner(root, env, ["reap", id]).code).toBe(0) // idempotent
   }, 15000)
 
+  test("result --path: verified read emits the exact file bytes; missing file exits 3", () => {
+    const root = makeRoot()
+    const artifact = path.join(mkTempRoot("peer-path-"), "artifact.txt")
+    const payload = "payload-line-1\npayload-line-2\n"
+    writeFileSync(artifact, payload)
+
+    const ok = runner(root, FAST, ["result", "--path", artifact])
+    expect(ok.code).toBe(0)
+    expect(ok.stdout).toBe(payload) // exact bytes, no wrapping or truncation
+
+    const missing = runner(root, FAST, [
+      "result", "--path", path.join(mkTempRoot("peer-path-"), "nope.txt"),
+    ])
+    expect(missing.code).toBe(3)
+    expect(missing.stdout).toBe("")
+  }, 10000)
+
+  test("result with neither a job nor --path is a usage error (exit 2)", () => {
+    const root = makeRoot()
+    const r = runner(root, FAST, ["result"])
+    expect(r.code).toBe(2)
+    expect(r.stdout).toBe("")
+    expect(r.stderr).toContain("needs a job id or --path")
+  }, 10000)
+
   test("ownership check and id-collision units (python fixture — must run, never skip)", () => {
     const r = spawnSync("python3", [FIXTURE], {
       encoding: "utf8",

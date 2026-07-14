@@ -422,6 +422,26 @@ describe("cross-model-doc-review normalization (R18, KTD5)", () => {
     expect(r.stderr).not.toContain("model mismatch")
   })
 
+  test("multi-key receipt: prefers the requested-family key over the alphabetically-first auxiliary key (R7)", () => {
+    // A real envelope can carry an auxiliary model's usage (here haiku) beside
+    // the serving model. jq `keys` sorts, so a naive keys[0] (or any sorted
+    // pick) would choose haiku; the prefix match must select the opus key and
+    // raise no mismatch warning.
+    const multiKeyStub =
+      `#!/bin/sh\ncat >/dev/null\nprintf '%s' '{"structured_output":{"reviewer":"adversarial","findings":[{"section":"X","title":"t"}]},"modelUsage":{"claude-haiku-4-5-20251001":{"inputTokens":2},"claude-opus-4-8-20260115":{"inputTokens":10}}}'\n`
+    const { env } = sandbox(["claude"], multiKeyStub)
+    const doc = makeDoc()
+    const runDir = makeRunDir()
+    const r = run(["codex", "claude", "adversarial", doc, "plan", "none", runDir], runDir, env)
+    expect(r.code).toBe(0)
+    const out = JSON.parse(
+      readFileSync(path.join(runDir, "adversarial-claude.json"), "utf8"),
+    )
+    expect(out.model_requested).toBe("opus")
+    expect(out.model_actual).toBe("claude-opus-4-8-20260115")
+    expect(r.stderr).not.toContain("model mismatch")
+  })
+
   test("keeps the served id and warns prominently on a receipt mismatch (R7)", () => {
     // Backend served a haiku id while opus was requested: the artifact must carry
     // the ACTUAL id (never the requested value) and stderr must warn.
