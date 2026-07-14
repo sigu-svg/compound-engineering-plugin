@@ -33,6 +33,24 @@ const REAL_TOOLS = [
   "dirname", "basename", "mktemp", "env", "perl", "timeout", "gtimeout", "sleep", "rm",
   "mv", "chmod", "cp", "printf", "kill", "mkdir",
 ]
+// A version-manager shim (pyenv/rbenv/perlbrew/mise) for an interpreter is a
+// wrapper *script*, not a symlink: `command -v python3` returns the shim, but
+// the sandbox PATH deliberately excludes the manager, so the linked shim cannot
+// exec (the script's JSON-recovery helper then fails to start Python). Resolve
+// interpreters to their real standalone binary by asking the interpreter
+// itself, so the sandbox links the executable rather than the shim. Already-real
+// paths and non-interpreter tools pass through unchanged.
+function resolveInterpreter(tool: string, resolved: string): string {
+  const probe =
+    tool === "python3"
+      ? ["-c", "import sys; print(sys.executable)"]
+      : tool === "perl"
+        ? ["-MConfig", "-e", "print $Config{perlpath}"]
+        : null
+  if (!probe) return resolved
+  const real = spawnSync(resolved, probe, { encoding: "utf8" }).stdout?.trim()
+  return real && existsSync(real) ? real : resolved
+}
 let resolvedTools: Array<[string, string]> | null = null
 function realToolPaths(): Array<[string, string]> {
   if (resolvedTools) return resolvedTools
@@ -42,7 +60,8 @@ function realToolPaths(): Array<[string, string]> {
       encoding: "utf8",
       shell: "/bin/bash",
     }).stdout?.trim()
-    if (real && existsSync(real)) resolvedTools.push([tool, real])
+    if (real && existsSync(real))
+      resolvedTools.push([tool, resolveInterpreter(tool, real)])
   }
   return resolvedTools
 }
