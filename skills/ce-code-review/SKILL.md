@@ -611,7 +611,7 @@ Independent verification gate. Spawn one validator sub-agent per surviving findi
 
 **Steps:**
 
-1. **Select findings to validate.** All survivors of Stage 5.
+1. **Select findings to validate.** All survivors of Stage 5, **except preference-grade `settled_conflict`-stamped findings, which are excluded from validation and from the dispatch budget entirely** — step 6c keeps them report-only and never applies them, so a defect-oriented validator verdict ("is the issue real in the code as written?") is meaningless and can only wrongly drop them; they pass through to Stage 6 / the JSON unchanged. **Invalidating-grade stamped findings validate normally** — they can halt a pipeline caller, so an independent verdict is valuable, and their full severity already protects them under the never-drop-P0/P1 budget rule.
 2. **Apply dispatch budget cap.** If the selected set exceeds 15 findings, validate the highest-severity 15 (P0 first, then P1, then P2, then P3, breaking ties by anchor descending), dropping only from the P2/P3 tail. **Never drop a P0 or P1 from validation** — if P0/P1 findings alone exceed 15, raise the cap to include all of them. Record the over-budget count (the dropped P2/P3 tail) for the Coverage section.
 3. **Spawn validators with bounded parallelism.** One sub-agent per finding, dispatched independently using the validator template and the same bounded scheduler from Stage 4. Each validator receives:
    - The finding's title, severity, file, line, suggested_fix, original reviewer name, and confidence anchor
