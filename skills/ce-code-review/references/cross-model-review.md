@@ -4,7 +4,7 @@ Runs the **adversarial** review through **one different model provider than the 
 
 This pass is **adversarial-only**. No other persona gets a cross-model twin, and there is no whole-diff generalist peer. Cost stays gated on the existing Stage 3 adversarial selection.
 
-All invocation detail (provider→route resolution, availability + classified-failure fallback, composing the prompt from the persona, read-only in-tree flags, per-provider model, per-route timeouts, capturing schema-shaped JSON, normalizing the reviewer name) lives in the bundled script **`scripts/cross-model-adversarial-review.sh`**. This reference decides *whether* to run it, *how the host provider is attested*, *how candidates are ordered*, and how to fold the result in. The pass is **non-blocking**: the script logs a reason and exits cleanly on any problem, writing no output file — a missing file is simply "no cross-model pass," never a failure.
+All invocation detail (provider→route resolution, availability + classified-failure fallback, composing the prompt from the persona, read-only in-tree flags, per-provider model, per-route timeouts, capturing schema-shaped JSON, normalizing the reviewer name) lives in the bundled script **`scripts/cross-model-adversarial-review.sh`**. This reference decides *whether* to run it, *how the host provider is attested*, *how candidates are ordered*, and how to fold the result in. The pass is **non-blocking**: the script logs a reason and exits cleanly on any problem, writing no output file — a missing file is simply "no cross-model pass," never a failure (though Step 5 distinguishes a never-started skip from a started job that ended non-`done`, which is named in Coverage rather than silent).
 
 ## Gates — run only when all hold
 
@@ -52,29 +52,32 @@ The script always uses the adversarial persona brief; fold-in forces `reviewer` 
 - **Interactive host, no peer resolved** (host un-attestable, or no different provider installed/authed): one quiet line that the cross-model pass was skipped and why. Never an error.
 - **`mode:agent`:** emit no user-facing prose. The script still emits a one-line stderr audit log per send that review content was sent cross-model to the named provider, so the third-party data egress is auditable.
 
-## Step 4 — Run the bundled script (in parallel with the persona reviewers)
+## Step 4 — Start the detached peer job (in parallel with the persona reviewers)
 
-The script is a CLI shell-out, not a subagent, so it doesn't consume the subagent concurrency budget. **Launch it as a background shell process in the same Stage 4 dispatch wave as the persona reviewers** so its runtime overlaps theirs, then **await exit before Stage 5** — do not orphan the launch by exiting the launcher shell early. The script itself ignores SIGHUP and only publishes a fold-in `.json` after normalize.
+The script is a CLI shell-out, not a subagent, so it doesn't consume the subagent concurrency budget. **Never hold a tool call open for the peer's runtime** — some harnesses kill long tool calls, which silently vanishes the pass. Start it as a **detached, supervised job** through the bundled runner in one short Bash call (prints the job id in under ~2s), launched **in the same Stage 4 dispatch wave as the persona reviewers** so its runtime overlaps theirs.
 
 Invoke via the skill-dir anchor — set `SKILL_DIR` to the absolute directory of **this** skill's `SKILL.md` (the Bash tool's CWD is the user's project, not the skill dir, on every host):
 
 ```bash
 SKILL_DIR="<absolute path of the directory containing the ce-code-review SKILL.md you read>";
-bash "$SKILL_DIR/scripts/cross-model-adversarial-review.sh" "<host-provider>" "<candidates>" "<base-ref>" "<run-dir>"
+python3 "$SKILL_DIR/scripts/peer-job-runner.py" start --skill ce-code-review --run-id "<run-id>" --label adversarial -- bash "$SKILL_DIR/scripts/cross-model-adversarial-review.sh" "<host-provider>" "<candidates>" "<base-ref>" "<run-dir>"
 ```
 
+- `<run-id>` = the Stage 4 run id (the same one that forms `<run-dir>`); job state lives under `/tmp/compound-engineering/ce-code-review/<run-id>/jobs/<job-id>/`.
 - `<host-provider>` = attested key from Step 1 (`codex`/`claude`/`grok`/`composer`, or `unknown` to force a clean skip).
 - `<candidates>` = the comma-separated preference-front-loaded provider order from Step 1 (e.g. `codex,claude,grok,composer`). The script excludes the host, applies the `CROSS_MODEL_PEERS` allowlist, walks this order by availability, and picks up to `CROSS_MODEL_MAX_PEERS` (default 1).
 - `<base-ref>` = the Stage 1 `BASE` (the diff base the peer reviews via `git diff <base-ref>`).
 - `<run-dir>` = the Stage 4 run dir (`/tmp/compound-engineering/ce-code-review/<run-id>/`). The script writes `adversarial-<provider>.json` there **only after** forcing `reviewer` to `adversarial-<provider>` and downgrading peer `safe_auto` → `gated_auto`.
 
-Set the Bash tool `timeout` / `block_until_ms` high enough to cover the hard cap (default 600s) **and await completion** — the script self-bounds (codex idle-timeout default 180s with reasoning forced on for liveness; hard backstop `CROSS_MODEL_HARD_SECS` default 600s) and exits cleanly. If the harness can't background a shell command, run the call inline before awaiting the reviewers; correctness is unaffected, only wall-clock. The script needs no prompt or schema passed in — it reads the persona brief and `findings-schema.json` from the skill dir and reviews the current work tree against `<base-ref>`.
+**Poll, don't await.** The runner detaches the worker into its own supervised session, so no tool call ever spans the peer's runtime — this detach-and-poll contract is uniform on every supported host, including hosts where a long-lived call would have worked. Interleave bounded polls (`python3 "$SKILL_DIR/scripts/peer-job-runner.py" wait --max-secs 30 <job-id>` — returns early when the job goes terminal) with your remaining Stage 4/5 work. Before the Stage 5 fold-in, loop bounded `wait` until the job is terminal **or 610s have elapsed since the `start`**; at that deadline `reap <job-id>` if it is still nonterminal, then do one final `status <job-id>` read and fold in the artifact if present. The script self-bounds (codex idle-timeout default 180s with reasoning forced on for liveness; hard backstop `CROSS_MODEL_HARD_SECS` default 600s) and the runner's supervisor backstops it, so the 610s deadline is a last-resort guard, not the normal exit. Done detection stays presence-keyed: the worker itself publishes `<run-dir>/adversarial-<provider>.json` after normalize; absence means the pass didn't run. The script needs no prompt or schema passed in — it reads the persona brief and `findings-schema.json` from the skill dir and reviews the current work tree against `<base-ref>`.
 
 ## Step 5 — Fold into Stage 5
 
 - Read `<run-dir>/adversarial-<provider>.json`. If present, treat it as one reviewer return with `reviewer: adversarial-<provider>`, exactly like a persona artifact: its merge-tier fields enter Stage 5 dedup/promotion. If the JSON's `reviewer` field is missing the `-<provider>` suffix (legacy/orphan raw output), **force** it from the filename stem before fold-in — never fold in a bare `adversarial`. Peer returns are a corroboration signal only — never auto-applied (`safe_auto`) and the cross-model bonus caps at one anchor step even if a second opt-in peer also agrees.
-- **No file** (script skipped: host un-attestable, no different provider reachable, CLI missing/unauthed, timeout, unparseable output, or gates not met) → the pass simply didn't run. Note "cross-model pass: not run" in Coverage on an interactive host in default mode; stay silent in `mode:agent`. Never fail the review. Ignore any `*.raw.json` leftovers — they are not fold-in artifacts.
+- **No file, clean skip** — the job was never started, or ended `done` without publishing (gates not met, host un-attestable, no different provider reachable, CLI missing/unauthed, unparseable output — the script logs the reason and exits cleanly) → the pass simply didn't run. Note "cross-model pass: not run" in Coverage on an interactive host in default mode; stay silent in `mode:agent`. Never fail the review. Ignore any `*.raw.json` leftovers — they are not fold-in artifacts.
+- **Started but not `done`** — the final status read reports `failed`, `timeout`, `died-without-result`, or the job was reaped at the 610s deadline → still non-blocking, but never silent: name the peer and its terminal state in Coverage (e.g. "cross-model adversarial peer: timeout"). Silent absence stays correct only for passes that never started or were skipped.
 - Empty `findings` → note "cross-model pass: no additional issues" in Coverage.
+- After fold-in (or after deadline reaping), delete the consumed job directory (`/tmp/compound-engineering/ce-code-review/<run-id>/jobs/<job-id>/`) — its log and result are review content and must not outlive their use.
 - A finding sharing a dedup fingerprint with the in-process `adversarial` persona promotes by one anchor step — the cross-model agreement signal, the strongest in the set (different model providers, separate processes).
 
 ## Trust boundary (maintainers)
