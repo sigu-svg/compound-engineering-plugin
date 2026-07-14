@@ -325,13 +325,18 @@ run_codex_cmd() {
 
 run_timeout_cmd() {
   local stdin_file="${1:-}"; [ -n "$stdin_file" ] || stdin_file=/dev/null
+  local prev; case "$-" in *m*) prev=1;; *) prev=0;; esac
+  set -m
   if [ -n "$TO_BIN" ]; then
-    ( cd "$PEER_WORKDIR" && exec "$TO_BIN" -k 10 "$HARD_SECS" "${CMD[@]}" ) < "$stdin_file" > "$PEERLOG" 2>/dev/null \
-      || log "peer exited non-zero or timed out"
+    ( cd "$PEER_WORKDIR" && exec "$TO_BIN" -k 10 "$HARD_SECS" "${CMD[@]}" ) < "$stdin_file" > "$PEERLOG" 2>/dev/null &
   else
-    ( cd "$PEER_WORKDIR" && exec perl -e 'alarm shift; exec @ARGV' "$HARD_SECS" "${CMD[@]}" ) < "$stdin_file" > "$PEERLOG" 2>/dev/null \
-      || log "peer exited non-zero or timed out"
+    ( cd "$PEER_WORKDIR" && exec perl -e 'alarm shift; exec @ARGV' "$HARD_SECS" "${CMD[@]}" ) < "$stdin_file" > "$PEERLOG" 2>/dev/null &
   fi
+  local pid=$!
+  ACTIVE_PEER_PID="$pid"
+  [ "$prev" = 0 ] && set +m
+  wait "$pid" 2>/dev/null || log "peer exited non-zero or timed out"
+  ACTIVE_PEER_PID=""
 }
 
 recover_findings_json() {
