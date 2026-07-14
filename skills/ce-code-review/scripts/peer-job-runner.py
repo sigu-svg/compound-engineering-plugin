@@ -838,11 +838,16 @@ def cmd_reap(args) -> int:
     worker_pid = pid_doc.get("worker_pid") if isinstance(pid_doc, dict) else None
 
     if isinstance(sup_pid, int) and _pid_alive(sup_pid):
-        # The supervisor owns TERM-grace-KILL and the terminal classification;
-        # signal it and return immediately.
+        # The supervisor owns TERM-grace-KILL and the terminal classification.
         if (isinstance(sup_pgid, int) and _killpg_quiet(sup_pgid, signal.SIGTERM)) \
                 or _kill_quiet(sup_pid, signal.SIGTERM):
-            return 0
+            # kill -0 is true for a zombie, so confirm the classification landed
+            # rather than trusting the signal; fall through to self-cleanup if not.
+            deadline = time.monotonic() + min(conf["grace"], 1.0)
+            while time.monotonic() < deadline:
+                if job_state(job_dir) in TERMINAL_STATES:
+                    return 0
+                time.sleep(0.05)
 
     # Supervisor gone: perform the tree kill and classification ourselves,
     # with a short grace so reap still returns quickly.
