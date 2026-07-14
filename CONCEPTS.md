@@ -79,6 +79,14 @@ A bulk evidence artifact — verbatim quotes with source pointers, gathered by a
 ### Load stub
 The inline remnant left in a Skill when load-bearing content moves to a reference file: a load instruction that names what the reference contains and the failure mode of skipping it, while keeping no detail an agent could improvise from — making the load structurally necessary rather than advisory.
 
+### Detached job
+A delegated worker process launched into its own session so it outlives the shell tool call that started it, with its state — status word, log, identity, and result — kept in a durable job directory the orchestrator polls between turns instead of awaiting in place.
+
+The launching call returns as soon as the job exists; supervision (idle and hard limits, process-tree reaping) runs inside the detached worker, while the caller keeps its own aggregate deadline and proceeds without the job when that passes. A job publishes exactly one terminal record, atomically, and nothing in the detached path may prompt for input.
+
+### Model identity receipt
+The serving backend's own report of which model actually handled a delegated run, recorded alongside the requested model so the two can disagree visibly. A run's model identity is verified only by such a receipt — never by the request parameters or the model's own text — and outputs without one are labeled as requested-but-unverified; logic that weights cross-model agreement follows the receipt, not the request.
+
 ## Review and workflow vocabulary
 
 ### Reviewer persona
