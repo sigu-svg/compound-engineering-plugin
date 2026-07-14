@@ -8,7 +8,7 @@ Read these slots in your prompt's `<review-context>` block:
 
 - `Document type:` — the orchestrator's authoritative classification (`requirements` or `plan`). Trust it; do not re-classify.
 - `Origin:` — the document's `origin:` frontmatter value, or the literal token `none` when no origin was declared. Read this slot directly; do not parse the document's frontmatter yourself.
-- `Settled decisions:` — session-settled Key Technical Decisions, or `none`. When Section 3 stress-testing or Section 5 alternative-blindness targets a listed decision, apply the context-slots infeasibility-versus-preference rule: preferring the rejected alternative is advisory-grade (anchor `50`, `manual`); only evidence the decision cannot work keeps normal severity.
+- `Settled decisions:` — session-settled Key Technical Decisions, or `none`. When Section 3 stress-testing or Section 5 alternative-blindness targets a listed decision, apply the context-slots infeasibility-versus-preference rule from the `Settled decisions:` slot rules (see the subagent template — the template's values are authoritative).
 
 Run the full 5-technique protocol only when adversarial scrutiny is genuinely useful for that doc shape — when premise has already been settled upstream, several of the techniques re-litigate decided questions and produce noisy "the motivation is thin" findings on plans whose motivation lives in the linked brainstorm. Calibrate by combining the two slots:
 

@@ -27,4 +27,16 @@ describe("settled-decisions shared-asset parity", () => {
       }
     })
   }
+
+  test("the shared reference pins the closed two-class enum", async () => {
+    const canonical = await readFile(
+      path.join(PLUGIN_ROOT, CONSUMER_SKILLS[0], SHARED_ASSETS[0]),
+      "utf8",
+    )
+    expect(canonical).toContain("`user-directed`")
+    expect(canonical).toContain("`user-approved`")
+    // Byte-parity alone would let every copy drift to a third class together.
+    expect(canonical).not.toContain("evidence-settled")
+    expect(canonical).not.toContain("agent-settled")
+  })
 })
