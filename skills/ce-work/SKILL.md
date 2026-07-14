@@ -324,7 +324,7 @@ Determine how to proceed based on what was provided in `<input_document>` (after
 
    If **`ce-simplify-code`** is available, invoke it at phase boundaries (especially before Phase 3 when the diff is >=30 lines). Otherwise, review the changed files yourself for reuse and consolidation opportunities.
 
-   When the plan carries `session-settled:`-labeled KTDs, pass the plan path with the one-line constraint that labeled KTDs are structure pins the simplification must preserve (e.g., deliberate duplication stays duplicated).
+   When the plan carries `session-settled:`-labeled KTDs, pass the plan path as structure-pin context, not as the simplification scope, with the one-line constraint that labeled KTDs are structure pins the simplification must preserve (e.g., deliberate duplication stays duplicated).
 
 6. **Figma Design Sync** (if applicable)
 
