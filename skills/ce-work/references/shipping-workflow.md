@@ -86,7 +86,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
 2. **Commit and Create Pull Request**
 
-   Load the `ce-commit-push-pr` skill to handle committing, pushing, and PR creation. The skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and configured PR attribution.
+   Load the `ce-commit-push-pr` skill with `branding:on` to handle committing, pushing, and PR creation. This explicit signal records that the Compound Engineering workflow produced the work; the skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and PR attribution.
 
    When providing context for the PR description, include:
    - The plan's summary and key decisions
@@ -120,7 +120,7 @@ Before creating PR, verify:
 - [ ] Simplify: `ce-simplify-code` when diff >=30 lines (or skipped with reason)
 - [ ] Code review: `ce-code-review` ran (self-sized), or skipped (mechanical diff / unavailable — noted in summary); residuals handled via the Residual Work Gate
 - [ ] PR description includes summary, testing notes, and evidence when captured
-- [ ] PR attribution policy was delegated to `ce-commit-push-pr`
+- [ ] `ce-commit-push-pr` received `branding:on` from the Compound Engineering workflow
 
 ## Code Review
 

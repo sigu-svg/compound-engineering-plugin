@@ -54,7 +54,7 @@ When invoking any skill referenced below, resolve its name against the available
 
 7. Invoke the `ce-test-browser` skill with `mode:pipeline`.
 
-8. Invoke the `ce-commit-push-pr` skill with `mode:pipeline`.
+8. Invoke the `ce-commit-push-pr` skill with `mode:pipeline branding:on`.
 
    This commits any remaining changes, pushes the branch, and opens a pull request — non-interactively, per the mode token. If it prints a `New concepts:` trailer after the PR URL, record the concept name(s) for step 10. If step 6 already opened a PR (check with `gh pr view --json number,url,state 2>/dev/null`), skip PR creation but still commit and push any uncommitted changes. **Per the shipping precondition, when no remote is configured, do NOT invoke `ce-commit-push-pr` — its commit step pushes unconditionally (`git push -u origin HEAD`), so a literal invocation would still hit the impossible push. Instead commit any remaining changes locally yourself (`git add -A && git commit`) and skip the push and PR creation entirely.**
 

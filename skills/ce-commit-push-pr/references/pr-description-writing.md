@@ -184,7 +184,7 @@ The opening goes under `## Summary` if the body uses any `##` headings; bare par
 
 ## Step D: Generic Compound Engineering branding
 
-For a **new PR body**, append the following block after a `---` rule when the resolved `pr_branding` gate is on (the default). Omit it when `pr_branding: false` or `branding:off` applies.
+For a **new PR body**, append the following block after a `---` rule only when the resolved branding gate is on. Otherwise omit it.
 
 ```markdown
 ---
@@ -194,7 +194,7 @@ For a **new PR body**, append the following block after a `---` rule when the re
 
 Do not add model or harness attribution. A PR may span multiple agents, models, harnesses, and review passes; naming one overstates its role, while listing every participant makes the footer noisy without giving reviewers useful provenance.
 
-For an **existing PR body**, preserve an existing branding block verbatim, including legacy model or harness badges. Never add one when absent, and never refresh, normalize, or remove it unless the user explicitly asks to remove or replace that exact content. The branding gate controls new-PR composition only; turning it off does not silently delete existing content.
+For an **existing PR body**, preserve an existing branding block verbatim, including legacy model or harness badges. Never add one when absent, and never refresh, normalize, or remove it unless the user explicitly asks to remove or replace that exact content. The branding signal controls new-PR composition only; omitting it does not silently delete existing content.
 
 Branding alone is never a reason to rewrite a PR description. If branding is the only difference between the existing and proposed bodies and the user did not explicitly ask for that change, keep the existing body and do not apply an update.
 

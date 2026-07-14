@@ -52,7 +52,7 @@ describe("ce-work review contract", () => {
 
     expect(shipping).toContain("`ce-commit-push-pr` skill")
     expect(shipping).toContain("`ce-commit` skill")
-    expect(shipping).toContain("configured PR attribution")
+    expect(shipping).toContain("`branding:on`")
     expect(shipping).not.toContain("attribution badges")
     expect(shipping).not.toContain("Compound Engineered badge with accurate model and harness")
 
@@ -724,7 +724,7 @@ describe("concept-teaching seam parity (ce-commit-push-pr <-> lfg)", () => {
     expect(lfg).toContain("New concepts:")
 
     // The callsite passes the mode explicitly rather than relying on defaults
-    expect(lfg).toContain("Invoke the `ce-commit-push-pr` skill with `mode:pipeline`.")
+    expect(lfg).toContain("Invoke the `ce-commit-push-pr` skill with `mode:pipeline branding:on`.")
 
     // The pre-DONE report line names the concept and the /ce-explain pointer
     expect(lfg).toContain("New concept introduced:")
@@ -732,6 +732,20 @@ describe("concept-teaching seam parity (ce-commit-push-pr <-> lfg)", () => {
 
     // The callee documents the mode the caller passes
     expect(skill).toContain("mode:pipeline")
+  })
+})
+
+describe("explicit Compound Engineering branding provenance", () => {
+  test("CE-owned shipping callers pass branding:on", async () => {
+    const shipping = await readRepoFile("skills/ce-work/references/shipping-workflow.md")
+    const lfg = await readRepoFile("skills/lfg/SKILL.md")
+    const debug = await readRepoFile("skills/ce-debug/SKILL.md")
+
+    expect(shipping).toContain("Load the `ce-commit-push-pr` skill with `branding:on`")
+    expect(lfg).toContain("ce-commit-push-pr` skill with `mode:pipeline branding:on`")
+    expect(debug).toContain("Invoke the `ce-commit-push-pr` skill with `branding:on`.")
+    expect(debug).toContain("reviewed fix (invoke the `ce-commit-push-pr` skill with `branding:on`)")
+    expect(debug).not.toContain("`/ce-commit-push-pr branding:on`")
   })
 })
 

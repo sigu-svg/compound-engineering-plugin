@@ -37,7 +37,7 @@ Without an explicit pipeline, autonomous runs tend to skip planning, treat revie
 - `/ce-code-review` reports findings, then `lfg` applies eligible fixes and commits them
 - Residual review findings are made durable in the PR body or a fallback tracked file
 - `/ce-test-browser` runs in pipeline mode
-- `/ce-commit-push-pr` ships remaining changes when a remote exists
+- `/ce-commit-push-pr mode:pipeline branding:on` ships remaining changes when a remote exists and explicitly marks the CE provenance
 - CI is watched for up to three repair iterations on an open PR
 
 The pipeline also has a local-only path: if the repository has no git remote, it commits locally and skips push, PR creation, and CI watch instead of retrying impossible network steps.

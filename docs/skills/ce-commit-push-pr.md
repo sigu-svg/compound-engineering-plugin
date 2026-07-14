@@ -46,7 +46,7 @@ Going from "code written" to "PR open" is supposed to be a one-step move, but it
 - **Full PR commit-range resolution** — descriptions cover all commits in the PR, not just the working-tree diff
 - **Related-reference preflight** — identifies work-item references and uses closing magic words only when the PR truly resolves the item
 - **Concept teaching** — when a PR introduces a concept new to the codebase (a pattern, technique, library, or domain idea), the description gains a `## New concepts` section teaching it, so readers can understand and re-explain the change without opening the diff
-- **Truthful, non-disruptive branding** — new PRs get one generic Compound Engineering badge by default; existing PR rewrites preserve their current branding, and no single model or harness is credited for multi-agent work
+- **Explicit, non-disruptive branding** — new PRs receive the generic Compound Engineering badge only with `branding:on`; bare and automatically selected invocations add nothing, while existing PR rewrites preserve their current branding
 
 ---
 
@@ -150,9 +150,9 @@ Skip `ce-commit-push-pr` when:
 
 `ce-commit-push-pr` is the standard shipping handoff for several skills:
 
-- **`/lfg` step 8** — invokes with `mode:pipeline` (non-interactive: no blocking asks, existing-PR rewrite defaults to no); when a `New concepts:` trailer is printed, lfg echoes the concept and the `/ce-explain` pointer in its completion output
-- **`/ce-work` Phase 4** — passes plan summary, key decisions, testing notes, evidence context, operational validation, and any accepted Known Residuals
-- **`/ce-debug` Phase 4** (skill-owned branch) — defaults to commit-and-PR without prompting after a successful fix; includes closing syntax only when the PR resolves the issue, and non-closing related syntax for partial, investigative, or uncertain links
+- **`/lfg` step 8** — invokes with `mode:pipeline branding:on` (non-interactive: no blocking asks, existing-PR rewrite defaults to no); when a `New concepts:` trailer is printed, lfg echoes the concept and the `/ce-explain` pointer in its completion output
+- **`/ce-work` Phase 4** — passes `branding:on` with the plan summary, key decisions, testing notes, evidence context, operational validation, and any accepted Known Residuals
+- **`/ce-debug` Phase 4** (skill-owned branch) — passes `branding:on` and defaults to commit-and-PR without prompting after a successful fix; includes closing syntax only when the PR resolves the issue, and non-closing related syntax for partial, investigative, or uncertain links
 - **`/ce-compound`** — after a learning doc is written, can commit + push to update an open PR with the new commit
 
 ---
@@ -181,7 +181,7 @@ When the skill's mode detection picks the wrong path, you can prompt explicitly 
 | `"...<focus text>"` | Steers description composition (e.g., "include the benchmarking results") |
 | `mode:pipeline` | Non-interactive modifier for orchestrated callers; suppresses every blocking ask (existing-PR rewrite defaults to no) |
 | `archive:on\|off` | Per-run override of the `pr_teaching_archive` config key (explainer-doc archival to `docs/explainers/`) |
-| `branding:on\|off` | Per-run override of `pr_branding` for newly created PRs; existing PR rewrites preserve their current branding |
+| `branding:on\|off` | Explicitly add or omit generic Compound Engineering branding on a newly created PR; omission defaults off, and existing PR rewrites preserve their current branding |
 
 ---
 
