@@ -17,7 +17,9 @@ import io
 import json
 import os
 import stat as stat_mod
+import subprocess
 import tempfile
+import time
 import types
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -159,6 +161,36 @@ class SafeTokenAllDots(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CE_PEER_JOBS_ROOT": root}):
             with self.assertRaises(MOD.RunnerError):
                 MOD.resolve_job_dir("..")
+
+
+class PidRunningZombie(unittest.TestCase):
+    def test_zombie_leader_counts_as_not_running(self):
+        # A just-exited leader is briefly a <defunct> zombie: os.kill(pid, 0)
+        # still succeeds, but the worker is gone. _pid_running must report it
+        # dead so reap classifies died-without-result, not timeout. This test
+        # process is the child's parent and never reaps it until the finally,
+        # so the zombie is stable (no init-reap race).
+        pid = os.fork()
+        if pid == 0:
+            os._exit(0)  # child exits immediately -> unreaped zombie
+        try:
+            deadline = time.monotonic() + 3.0
+            state = ""
+            while time.monotonic() < deadline:
+                state = subprocess.run(
+                    ["ps", "-o", "state=", "-p", str(pid)],
+                    capture_output=True, text=True, check=False,
+                ).stdout.strip()
+                if state.startswith("Z"):
+                    break
+                time.sleep(0.02)
+            self.assertTrue(
+                state.startswith("Z"), f"child never became a zombie (state={state!r})"
+            )
+            self.assertTrue(MOD._pid_alive(pid))  # kill -0 succeeds for a zombie
+            self.assertFalse(MOD._pid_running(pid))  # ...but it is not running
+        finally:
+            os.waitpid(pid, 0)  # reap the zombie
 
 
 if __name__ == "__main__":

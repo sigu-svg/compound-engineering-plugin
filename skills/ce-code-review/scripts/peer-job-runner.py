@@ -330,6 +330,26 @@ def _pid_alive(pid: int) -> bool:
         return True
 
 
+def _pid_running(pid: int) -> bool:
+    """True only for a live process, NOT a <defunct> zombie. os.kill(pid, 0)
+    succeeds for a zombie (the process exited but has not been reaped), which
+    must not count as a live worker when classifying a reap: a zombie leader
+    means the worker is gone (died-without-result), not still running (timeout).
+    Falls back to the kill -0 result when process state is unavailable."""
+    if not _pid_alive(pid):
+        return False
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "state=", "-p", str(pid)],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip()
+    except OSError:
+        return True
+    if not out:
+        return False
+    return not out.startswith("Z")
+
+
 def _kill_quiet(pid: int, sig: int) -> bool:
     try:
         os.kill(pid, sig)
@@ -388,7 +408,11 @@ def kill_tree(root_pid: int, grace: float) -> bool:
     # Do NOT early-return just because the leader pid is dead: killpg targets
     # the pgid, which persists while any group member lives even after the
     # leader exits, so a dead leader can still front a live group we must sweep.
-    leader_alive = _pid_alive(root_pid)
+    # Use _pid_running (zombie-aware), not _pid_alive: a just-exited leader is
+    # briefly a <defunct> zombie for which kill -0 still succeeds, and counting
+    # that as alive would misclassify the reap as timeout instead of
+    # died-without-result (and make the dead-leader sweep test timing-dependent).
+    leader_alive = _pid_running(root_pid)
     # Snapshot the descendant set BEFORE any KILL: once the group leader is
     # reaped its children reparent to init and drop out of the tree, so a set
     # enumerated after the kill would miss them and leak orphans.
