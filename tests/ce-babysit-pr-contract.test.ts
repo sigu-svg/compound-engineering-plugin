@@ -72,8 +72,9 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
   })
 
   test("the delegated-mutation exclusion boundary is stated at all three ends of the chain", async () => {
-    // babysit passes a bounded scope whose exclusions (never rebase/force-push/merge/approve) the
-    // delegates must honor. If either child drops the boundary, babysit's contract is one-sided.
+    // Babysit passes a bounded target-fixer scope whose exclusions
+    // (never rebase/force-push/merge/approve) the delegates must honor. Babysit may separately own
+    // a confirmed manager's post-push transaction; that exception must never leak into a child.
     // 'rebase' and 'force-push' are specific enough to canary the exclusion block; 'merge' is not
     // (merge-ready / merge conflict are ordinary prose here).
     const [babysit, cedebug, ceresolve] = await Promise.all([
@@ -222,6 +223,9 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     expect(babysit).toMatch(/automatically classify.*PR chain/i)
     expect(babysit).toContain("gh stack view --json")
     expect(babysit).toMatch(/GraphQL fallback/i)
+    expect(babysit).toMatch(/stack-field schema-unavailable[\s\S]{0,100}.absent./i)
+    expect(babysit).toMatch(/separate read-only lookup[\s\S]{0,100}default branch/i)
+    expect(babysit).toMatch(/auth, transport, rate-limit, malformed[\s\S]{0,100}.probe-error./i)
     expect(babysit).toContain("Discovery never runs `gh stack checkout`")
     expect(babysit).not.toMatch(/gh stack checkout\s+<[^>]+>/)
     expect(watchLoop).not.toMatch(/gh stack checkout\s+<[^>]+>/)
@@ -235,6 +239,23 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     expect(babysit).toMatch(/relative to (its|the) parent/i)
     expect(babysit).toMatch(/do not redirect/i)
     expect(babysit).toMatch(/upstack.*residual/i)
+  })
+
+  test("a target push in a confirmed managed stack is followed by transactional upstack maintenance", async () => {
+    const [babysit, watchLoop] = await Promise.all([
+      readRepoFile(BABYSIT),
+      readRepoFile("skills/ce-babysit-pr/references/watch-loop.md"),
+    ])
+
+    for (const text of [babysit, watchLoop]) {
+      expect(text).toContain("gh stack rebase --upstack --no-trunk")
+      expect(text).toContain("gh stack push")
+      expect(text).toContain("--force-with-lease --atomic")
+      expect(text).toMatch(/gh stack rebase --abort[\s\S]{0,300}(residual|needs-human)/i)
+      expect(text).toMatch(/manual dependency[\s\S]{0,500}(never|do not)[\s\S]{0,120}(rebase|rewrite|restack)/i)
+    }
+    expect(babysit).toMatch(/after (an|any) authorized target-head push[\s\S]{0,1200}gh stack rebase --upstack --no-trunk/i)
+    expect(babysit).toMatch(/manager-owned[\s\S]{0,200}(implicit|babysit)[\s\S]{0,200}author/i)
   })
 
   test("bounded-class sweep contract: babysit routes it, ce-resolve classifies/enumerates/bounds it", async () => {

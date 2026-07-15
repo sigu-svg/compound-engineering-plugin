@@ -84,6 +84,7 @@ function probeChain(options: {
   headRef?: string
   stackView: { status: number; stdout?: unknown; stderr?: string }
   graphql: { status: number; stdout?: unknown; stderr?: string }
+  defaultBranch?: { status: number; stdout?: unknown; stderr?: string }
   openPrs?: unknown[]
 }): { chain: any; calls: string[] } {
   const payload = {
@@ -93,6 +94,7 @@ function probeChain(options: {
     head_ref: options.headRef ?? "feature",
     stack_view: options.stackView,
     graphql: options.graphql,
+    default_branch: options.defaultBranch ?? { status: 0, stdout: "main\n" },
     open_prs: options.openPrs ?? [],
   }
   const python = `
@@ -112,6 +114,8 @@ def fake(cmd):
         cfg = p["stack_view"]
     elif cmd[:3] == ["gh", "api", "graphql"]:
         cfg = p["graphql"]
+    elif cmd[:2] == ["gh", "api"]:
+        cfg = p["default_branch"]
     else:
         cfg = {"status": 0, "stdout": p["open_prs"]}
     result = Result()
@@ -377,12 +381,41 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
   })
 
   test("manager probe failure remains unknown and never collapses to absent", () => {
-    const { chain } = probeChain({
+    const { chain, calls } = probeChain({
       stackView: { status: 1, stderr: "no current stack" },
-      graphql: { status: 1, stderr: "field stack not found" },
+      graphql: { status: 1, stderr: "gh: HTTP 401: Bad credentials" },
     })
     expect(chain.manager_status).toBe("probe-error")
     expect(chain.manager_status).not.toBe("absent")
+    expect(calls.filter((call) => call.startsWith("gh api ")).length).toBe(1)
+  })
+
+  test("unavailable stack fields fall back to the default branch and manual-chain classification", () => {
+    const { chain, calls } = probeChain({
+      baseRef: "parent",
+      headRef: "feature",
+      stackView: { status: 1, stderr: "no current stack" },
+      graphql: { status: 1, stderr: "gh: Field 'stackEntry' doesn't exist on type 'PullRequest'" },
+      defaultBranch: { status: 0, stdout: "main\n" },
+      openPrs: [
+        { number: 41, url: "https://github.com/o/r/pull/41", state: "OPEN", baseRefName: "main", headRefName: "parent" },
+        { number: 43, url: "https://github.com/o/r/pull/43", state: "OPEN", baseRefName: "feature", headRefName: "child" },
+      ],
+    })
+    expect(calls).toContain("gh api repos/o/r --jq .default_branch")
+    expect(chain.manager_status).toBe("absent")
+    expect(chain.relationship_status).toBe("dependent")
+    expect(chain.parent_prs.map((pr: any) => pr.number)).toEqual([41])
+    expect(chain.dependent_prs.map((pr: any) => pr.number)).toEqual([43])
+  })
+
+  test("stack fields unavailable with no default-branch fallback remains a manager probe error", () => {
+    const { chain } = probeChain({
+      stackView: { status: 1, stderr: "no current stack" },
+      graphql: { status: 1, stderr: "GraphQL: Cannot query field \"stack\" on type \"PullRequest\"." },
+      defaultBranch: { status: 1, stderr: "network unavailable" },
+    })
+    expect(chain.manager_status).toBe("probe-error")
   })
 
   test("colliding check keys are disambiguated (both failing checks surface, neither shadows)", () => {

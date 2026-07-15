@@ -32,6 +32,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -129,6 +130,29 @@ def _resolve_repo_ref(repo, url):
 def _host_args(host):
     """`gh api --hostname` selector so GHE calls hit the PR's host, not the default github.com."""
     return ["--hostname", host] if host else []
+
+
+def _stack_schema_unavailable(stderr):
+    """Recognize only GraphQL schema errors for the private-preview PullRequest stack fields."""
+    unavailable_markers = ("doesn't exist on type", "does not exist on type",
+                           "cannot query field", "unknown field")
+    for line in (stderr or "").splitlines():
+        lowered = line.lower()
+        if ("pullrequest" in lowered
+                and re.search(r"\bstack(?:entry)?\b", lowered)
+                and any(marker in lowered for marker in unavailable_markers)):
+            return True
+    return False
+
+
+def _fetch_default_branch(owner, name, host=None):
+    """Read the default branch without relying on private-preview GraphQL fields."""
+    result = _run(["gh", "api", *_host_args(host), f"repos/{owner}/{name}",
+                   "--jq", ".default_branch"])
+    if result.returncode != 0:
+        return None
+    branch = result.stdout.strip()
+    return branch if branch and branch != "null" else None
 
 
 def _thread_identity(t):
@@ -251,6 +275,10 @@ query($owner:String!,$repo:String!,$pr:Int!){
             "-F", f"pr={pr}", "-f", f"query={query}"]
     r = _run(args)
     if r.returncode != 0:
+        if _stack_schema_unavailable(r.stderr):
+            default_branch = _fetch_default_branch(owner, name, host)
+            if default_branch:
+                return MANAGER_ABSENT, None, default_branch
         return MANAGER_PROBE_ERROR, None, None
     try:
         repository = json.loads(r.stdout)["data"]["repository"]
