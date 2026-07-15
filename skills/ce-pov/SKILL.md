@@ -94,6 +94,9 @@ echo "$SCRATCH_DIR"
 
 Emit the contract for the active subject shape defined in `references/method.md`. For an external-adoption question, the existing grade vocabulary, schema fields, tier sizing, and output economy apply unchanged. A document take or approach-set position follows its own explicit contract. Every shape is a **compact chat block, not a research report**: lead with the grade, bottom line, or position named by its contract; keep each field terse; and never reprint scout dossiers or raw search output.
 
+When a panel is named, summoned, or offered-and-accepted, read
+`references/cross-model-panel.md` and follow it before delivering the POV.
+
 ### Phase 4: Follow-up
 
 The chat POV (the TL;DR) is the deliverable. Any implementation is outside this read-only contract: offer document edits, proceeding with a chosen approach, or planning an adoption only as a separate continuation through the owning skill. What you offer next is **reasoned from the POV and sized to the tier — never a fixed menu, and never an assumption that everything routes to a plan.**
