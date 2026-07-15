@@ -62,6 +62,15 @@ describe("ce-pov subject-shape contract", () => {
 })
 
 describe("ce-pov cross-model panel contract", () => {
+  test("loads the panel protocol before deciding whether to offer", async () => {
+    const skill = await skillFile("SKILL.md")
+    const phaseThree = between(skill, "### Phase 3: Point of View", "### Phase 4: Follow-up")
+
+    expect(phaseThree).toContain("may qualify for a proactive offer")
+    expect(phaseThree).toContain("before resolving participation or deciding whether to offer")
+    expect(phaseThree).toContain("Peers stay read-only")
+  })
+
   test("uses the JSON Schema draft supported by the Claude CLI", async () => {
     const schema = JSON.parse(await skillFile("references/pov-schema.json"))
 
