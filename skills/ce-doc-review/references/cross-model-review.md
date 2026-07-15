@@ -17,13 +17,13 @@ Keep four identities separate: requested **target**, CLI **harness/intermediary*
 Attest both the host harness and its serving family:
 
 ```bash
-if [ "${CLAUDECODE:-}" = "1" ]; then XHOST=claude;
-elif [ -n "${CODEX_SANDBOX:-}${CODEX_SANDBOX_NETWORK_DISABLED:-}${CODEX_SESSION_ID:-}${CODEX_THREAD_ID:-}${CODEX_CI:-}" ]; then XHOST=codex;
-elif [ -n "${CURSOR_AGENT:-}${CURSOR_CONVERSATION_ID:-}" ]; then XHOST=cursor;
-else XHOST=unknown; fi
+if [ "${CLAUDECODE:-}" = "1" ]; then XHOST_HARNESS=claude; XHOST_FAMILY=claude;
+elif [ -n "${CODEX_SANDBOX:-}${CODEX_SANDBOX_NETWORK_DISABLED:-}${CODEX_SESSION_ID:-}${CODEX_THREAD_ID:-}${CODEX_CI:-}" ]; then XHOST_HARNESS=codex; XHOST_FAMILY=codex;
+elif [ -n "${CURSOR_AGENT:-}${CURSOR_CONVERSATION_ID:-}" ]; then XHOST_HARNESS=cursor; XHOST_FAMILY=unknown;
+else XHOST_HARNESS=unknown; XHOST_FAMILY=unknown; fi
 ```
 
-Pass the harness separately as `CROSS_MODEL_HOST_HARNESS`; pass the attested serving family as the first worker argument. Claude Code maps to harness/family `claude`; Codex maps to `codex`; Cursor maps to harness `cursor` and its observable serving family (`codex`, `claude`, `grok`, or `composer`), or family `unknown`. An unknown host family cannot satisfy automatic same-family exclusion, so skip the automatic cross-model pass. Never infer serving family from the CLI brand.
+Pass `XHOST_HARNESS` as `CROSS_MODEL_HOST_HARNESS`; pass `XHOST_FAMILY` as the first worker argument. Claude Code maps to harness/family `claude`; Codex maps to `codex`. Cursor maps to harness `cursor` and family `unknown` unless an observable serving-family attestation lets you set `XHOST_FAMILY` to `codex`, `claude`, `grok`, or `composer`. An unknown host family cannot satisfy automatic same-family exclusion, so skip the automatic cross-model pass. Never infer serving family from the Cursor brand.
 
 Resolve the preference in this order:
 
