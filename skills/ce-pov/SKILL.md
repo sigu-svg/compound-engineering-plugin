@@ -1,20 +1,22 @@
 ---
 name: ce-pov
-description: "Give a decisive, project-grounded verdict on an external input — judged against the current project, not in the abstract. Use to decide whether to adopt, switch to, or revisit a technology, library, pattern, platform, or architecture; to compare a candidate against what the project already uses; to judge whether an external change (a CVE, a deprecation, an ecosystem shift) actually affects this project; or for a mid-session second opinion. Always returns a project-specific verdict, so it is not for neutral explainers or generating options."
-argument-hint: "[the external thing to judge, plus any links] — or invoke bare mid-session for a second opinion"
+description: "Give a decisive, project-grounded point of view in the subject's own shape: a graded verdict on an external-adoption question, a holistic take on a document, or a position on a user-supplied approach set. Use for a solo POV, a mid-session second opinion, a named-peer cross-check, an `oracle` panel, or a correction-cost-gated proactive cross-check offer. Not for findings review (use ce-doc-review), neutral explainers, or generating options (use ce-ideate or ce-brainstorm)."
+argument-hint: "[adoption question, document, or supplied approaches] [compare/cross-check with peers or oracle] — or invoke bare mid-session"
 ---
 
 # Form a Point of View
 
-Return a decisive, **graded verdict** on something from the outside world — judged against *this project*, not in the abstract.
+Produce a decisive, project-grounded point of view in the subject's own shape: a **graded verdict** on an external-adoption question, a **holistic take** on a document, or a **position** on a supplied approach set. The user or calling skill is the next consumer and decides whether to act on the recommendation. This skill is done when it has delivered the POV with its attribution and required disclosure, or returned an explicit blocker. The intent is the moat: the POV must be earned against this project, never generic.
 
 The subject of this point of view — the thing to judge — is the input this skill was invoked with, present in the current prompt or conversation (whether the user asked directly or a calling skill passed it).
+
+`ce-pov` is read-only. Its contract ends at the delivered POV and recommendation; applying document edits, proceeding with an approach, or planning an adoption is a separate continuation offered in Phase 4 through the skill that owns that work.
 
 **Note: The current year is 2026.** Use this when weighting source recency and dating any captured record.
 
 ## The one rule that is the whole moat
 
-**Do not issue a verdict you did not earn against the project's own context.** Generic web research already covers "tell me about X"; the differentiator is never "research the web" — it is the refusal to answer in the abstract. The verdict must clear **two absolute floors** (see `references/method.md`): a **project floor** (a concrete verified project fact — a named incumbent + a touchpoint, or for a net-new adoption the verified absence of one plus where it would fit, or a prior decision) and an **external floor** (at least one verified external source). The floors are absolute and independent — strong external evidence never compensates for a thin project leg, and vice versa. Neither the conversation nor the user's own assertions substitute for grounding.
+**Do not issue a POV you did not earn against the project's own context.** Generic web research already covers "tell me about X"; the differentiator is never "research the web" — it is the refusal to answer in the abstract. Every subject must clear the **project floor** in `references/method.md`. An external-adoption verdict must also clear the full **external floor**; a document or approach-set POV must externally verify any external claim that is load-bearing to its bottom line. Neither the conversation nor the user's own assertions substitute for grounding.
 
 ## Interaction Method
 
@@ -26,7 +28,7 @@ Dispatch is tiered by task shape, never hardcoded to a model name:
 
 - **Extraction tier** — the project-grounding scout and the precedent-&-activity scout: search-and-quote work. Use the platform's cheapest capable model when the harness exposes a known override; otherwise inherit.
 - **Generation tier** — the external-evidence researcher: web/docs retrieval and entailment checking. Use the platform's mid-tier model when a known override exists; otherwise inherit.
-- **Ceiling tier** — the verdict reasoning itself (the two-floor gate, the skeptic synthesis, the verdict contract). This runs in the main conversation on the orchestrator's model; nothing is dispatched for it.
+- **Ceiling tier** — the POV reasoning itself (the grounding gate, the skeptic synthesis, the subject-shape contract). This runs in the main conversation on the orchestrator's model; nothing is dispatched for it.
 
 **Degradation rule.** When the platform's subagent primitive cannot select per-agent models, dispatch every scout on the inherited model and keep their read budgets — cost control then comes from the read budgets and the tier-sensitive scout count, not from tiering.
 
@@ -34,7 +36,7 @@ Dispatch is tiered by task shape, never hardcoded to a model name:
 
 ### Phase 0: Frame and Classify
 
-**Output mode:** by default `ce-pov` writes no document — the verdict is a compact chat block. An optional full write-up and a durable `ce-compound` capture are available on request at Phase 4. Do not resolve an `OUTPUT_FORMAT` or load a rendering reference up front.
+**Output mode:** by default `ce-pov` writes no document — the POV is a compact chat block. An optional full write-up and a durable `ce-compound` capture are available on request at Phase 4. Do not resolve an `OUTPUT_FORMAT` or load a rendering reference up front.
 
 1. **Detect the invocation context — cold or warm.** Warm means `ce-pov` was invoked mid-session for a second opinion, with the question sitting in the surrounding conversation or absent. For the warm contract beyond the frame — taking only the *question and claims-to-verify* (never grounding), the guest output, the provenance buckets — read `references/invocation.md`.
 
@@ -84,17 +86,17 @@ echo "$SCRATCH_DIR"
 
 **Populate the provenance buckets** from the returned dossiers, keeping them separate for Phase 2: *observed-project-facts* and *verified-external-facts* (these count as grounding) vs. *conversation-claims* and *unconfirmed-assumptions* from a warm invocation (these do not count until a scout corroborates them). Read dossiers from their paths on demand; do not pull their bulk into this context.
 
-### Phase 2: Verify against the two floors
+### Phase 2: Verify Grounding
 
-**Read `references/method.md` now**, before reasoning about the verdict — it defines the Verify and Verdict steps, the skeptic stance and reversibility tiering as cross-cutting properties, and the two-floor Invalid-Verdict gate. Apply that gate as a pass/fail checklist over the dossiers: a failed floor forbids Adopt/Reject and returns the matching Hold subtype. Do this reasoning on the clean context — read a dossier on demand, never pull its bulk in.
+**Read `references/method.md` now**, before reasoning about the POV — it defines the Verify and POV steps, the skeptic stance and reversibility tiering as cross-cutting properties, and the subject-aware grounding gate. Apply that gate as a pass/fail checklist over the dossiers: on an external-adoption subject a failed floor forbids Adopt/Reject and returns the matching Hold subtype; on a document or approach set it returns the matching explicit Blocked result. Do this reasoning on the clean context — read a dossier on demand, never pull its bulk in.
 
-### Phase 3: Verdict
+### Phase 3: Point of View
 
-Emit the verdict contract defined in `references/method.md` — grade vocabulary, schema fields, tier sizing, and output economy are all specified there. The verdict is a **compact chat block, not a research report**: lead with the grade, keep each schema field terse, and never reprint scout dossiers or raw search output. Size it to the tier — a Tier 1 verdict fits one screen; Tier 2/3 carries the full workup but still leads with the verdict and cites evidence rather than pasting it.
+Emit the contract for the active subject shape defined in `references/method.md`. For an external-adoption question, the existing grade vocabulary, schema fields, tier sizing, and output economy apply unchanged. A document take or approach-set position follows its own explicit contract. Every shape is a **compact chat block, not a research report**: lead with the grade, bottom line, or position named by its contract; keep each field terse; and never reprint scout dossiers or raw search output.
 
 ### Phase 4: Follow-up
 
-The chat verdict (the TL;DR) is the deliverable. What you offer next is **reasoned from the verdict and sized to the tier — never a fixed menu, and never an assumption that everything routes to a plan.**
+The chat POV (the TL;DR) is the deliverable. Any implementation is outside this read-only contract: offer document edits, proceeding with a chosen approach, or planning an adoption only as a separate continuation through the owning skill. What you offer next is **reasoned from the POV and sized to the tier — never a fixed menu, and never an assumption that everything routes to a plan.**
 
 **Compute the next step.** From the grade and the verdict's Handoff field, reason about the single best next move and a one-clause why — it is not always obvious between plan and brainstorm, so decide in context:
 
