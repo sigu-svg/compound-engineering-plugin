@@ -191,6 +191,15 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     )
   })
 
+  test("live updates report PR state without leaking routine watcher mechanics", async () => {
+    // Regression guard: progress narration led with a wake race and re-arm details instead of the
+    // user-relevant outcome (feedback already addressed; CI still running).
+    const babysit = await readRepoFile(BABYSIT)
+    expect(babysit).toContain("PR state first in live updates")
+    expect(babysit).toMatch(/wake, snapshot, re-arm, or head as internal implementation detail/)
+    expect(babysit).toMatch(/only when they explain a failure or required user action/)
+  })
+
   test("authority boundary: babysit never merges; readiness is reported as the user's call", async () => {
     const babysit = await readRepoFile(BABYSIT)
     expect(babysit).toMatch(/\*\*never\*\* merges the PR/i)
