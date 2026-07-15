@@ -4,6 +4,101 @@
 
 AI skills that make each unit of engineering work easier than the last.
 
+## Install
+
+### Claude Code
+
+```text
+/plugin marketplace add EveryInc/compound-engineering-plugin
+/plugin install compound-engineering
+```
+
+> **Already have Compound Engineering installed?** Compound Engineering moved to a root-native layout. You must refresh the marketplace *before* updating — see [Existing Installs](#existing-installs). Running `/plugin update` alone keeps you on the old version.
+
+### Cursor
+
+In Cursor Agent chat, install from the plugin marketplace:
+
+```text
+/add-plugin compound-engineering
+```
+
+Or search for "compound engineering" in the plugin marketplace.
+
+### Codex App
+
+Compound Engineering is not listed in Codex's built-in plugin marketplace yet. Add it as a custom marketplace:
+
+1. In the Codex app, open **Plugins** from the sidebar.
+2. Click **Add** / **Add plugin marketplace**.
+3. Enter:
+
+   | Field | Value |
+   | --- | --- |
+   | Source | `EveryInc/compound-engineering-plugin` |
+   | Git ref | `main` |
+   | Sparse paths | leave blank |
+
+4. Click **Add marketplace**.
+5. Select **Compound Engineering**, install **compound-engineering**, then restart Codex.
+
+The Codex app install is self-contained for Compound Engineering. Specialist reviewer and research behavior lives inside the skills as local prompt assets; no separate custom-agent install step is required.
+
+### Codex CLI
+
+Register the marketplace, then install the plugin.
+
+1. **Register the marketplace with Codex:**
+
+   ```bash
+   codex plugin marketplace add EveryInc/compound-engineering-plugin
+   ```
+
+2. **Install the plugin:**
+
+   ```bash
+   codex plugin add compound-engineering@compound-engineering-plugin
+   ```
+
+   You can also launch `codex`, run `/plugins`, find the **Compound Engineering** marketplace, select the **compound-engineering** plugin, and choose **Install**. Restart Codex after install completes.
+
+The native Codex plugin install is self-contained for Compound Engineering. Specialist reviewer and research behavior lives inside the skills as local prompt assets; no separate custom-agent install step is required.
+
+For a non-default Codex profile, run every Codex-related step against the same `CODEX_HOME`. This example installs CE into a `work` profile:
+
+```bash
+CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add EveryInc/compound-engineering-plugin
+CODEX_HOME="$HOME/.codex/profiles/work" codex plugin add compound-engineering@compound-engineering-plugin
+```
+
+The marketplace step only makes the plugin available; the plugin install is what activates the native CE skills for that profile.
+
+#### Remove the legacy Codex tool map (pre-native installs)
+
+If you previously installed Compound Engineering with the Bun `convert` / `install --to codex` CLI (before native Codex plugin support), that path may have inserted a managed block into your **global** Codex instructions file:
+
+`<!-- BEGIN COMPOUND CODEX TOOL MAP -->` … `<!-- END COMPOUND CODEX TOOL MAP -->`
+
+in `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`). That Claude-compat tool map is obsolete — CE skills name Codex tools inline — and one of its lines incorrectly told Codex to collapse subagent dispatch onto the main thread. Native plugin install does **not** add this block.
+
+Paste this into Codex (or any agent with access to your home directory) to remove it:
+
+```text
+Remove the obsolete Compound Engineering Codex tool-map block from my Codex home AGENTS.md.
+
+1. Check `$CODEX_HOME/AGENTS.md` if CODEX_HOME is set, otherwise `~/.codex/AGENTS.md`. If I use Codex profiles, also check `~/.codex/profiles/*/AGENTS.md`.
+2. Look for the exact sentinels `<!-- BEGIN COMPOUND CODEX TOOL MAP -->` and `<!-- END COMPOUND CODEX TOOL MAP -->`.
+3. If both are present, delete only the span from the BEGIN line through the END line (inclusive), leaving any other user content untouched. Do not edit project/repo AGENTS.md unless those exact sentinels are present there.
+4. If the file is empty after the removal, delete the file.
+5. Show a short before/after summary of what you changed (or say the block was already absent). Do not add a replacement tool map.
+```
+
+Re-running the Bun convert/install CLI for Codex also strips the block if it is still present; it no longer inserts it.
+
+**Another editor or CLI?** Kimi Code CLI, Cline, Grok Build CLI, Devin CLI, GitHub Copilot, Factory Droid, Qwen Code, OpenCode, Pi, and Antigravity CLI are all supported — see [More install options](#more-install-options).
+
+---
+
 ## Philosophy
 
 **Each unit of engineering work should make subsequent units easier -- not harder.**
@@ -147,96 +242,9 @@ The `compound-engineering` plugin currently ships 30 skills and 0 standalone age
 
 ---
 
-## Install
+## More Install Options
 
-### Claude Code
-
-```text
-/plugin marketplace add EveryInc/compound-engineering-plugin
-/plugin install compound-engineering
-```
-
-> **Already have Compound Engineering installed?** Compound Engineering moved to a root-native layout. You must refresh the marketplace *before* updating — see [Existing Installs](#existing-installs). Running `/plugin update` alone keeps you on the old version.
-
-### Cursor
-
-In Cursor Agent chat, install from the plugin marketplace:
-
-```text
-/add-plugin compound-engineering
-```
-
-Or search for "compound engineering" in the plugin marketplace.
-
-### Codex App
-
-Compound Engineering is not listed in Codex's built-in plugin marketplace yet. Add it as a custom marketplace:
-
-1. In the Codex app, open **Plugins** from the sidebar.
-2. Click **Add** / **Add plugin marketplace**.
-3. Enter:
-
-   | Field | Value |
-   | --- | --- |
-   | Source | `EveryInc/compound-engineering-plugin` |
-   | Git ref | `main` |
-   | Sparse paths | leave blank |
-
-4. Click **Add marketplace**.
-5. Select **Compound Engineering**, install **compound-engineering**, then restart Codex.
-
-The Codex app install is self-contained for Compound Engineering. Specialist reviewer and research behavior lives inside the skills as local prompt assets; no separate custom-agent install step is required.
-
-### Codex CLI
-
-Register the marketplace, then install the plugin.
-
-1. **Register the marketplace with Codex:**
-
-   ```bash
-   codex plugin marketplace add EveryInc/compound-engineering-plugin
-   ```
-
-2. **Install the plugin:**
-
-   ```bash
-   codex plugin add compound-engineering@compound-engineering-plugin
-   ```
-
-   You can also launch `codex`, run `/plugins`, find the **Compound Engineering** marketplace, select the **compound-engineering** plugin, and choose **Install**. Restart Codex after install completes.
-
-The native Codex plugin install is self-contained for Compound Engineering. Specialist reviewer and research behavior lives inside the skills as local prompt assets; no separate custom-agent install step is required.
-
-For a non-default Codex profile, run every Codex-related step against the same `CODEX_HOME`. This example installs CE into a `work` profile:
-
-```bash
-CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add EveryInc/compound-engineering-plugin
-CODEX_HOME="$HOME/.codex/profiles/work" codex plugin add compound-engineering@compound-engineering-plugin
-```
-
-The marketplace step only makes the plugin available; the plugin install is what activates the native CE skills for that profile.
-
-#### Remove the legacy Codex tool map (pre-native installs)
-
-If you previously installed Compound Engineering with the Bun `convert` / `install --to codex` CLI (before native Codex plugin support), that path may have inserted a managed block into your **global** Codex instructions file:
-
-`<!-- BEGIN COMPOUND CODEX TOOL MAP -->` … `<!-- END COMPOUND CODEX TOOL MAP -->`
-
-in `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`). That Claude-compat tool map is obsolete — CE skills name Codex tools inline — and one of its lines incorrectly told Codex to collapse subagent dispatch onto the main thread. Native plugin install does **not** add this block.
-
-Paste this into Codex (or any agent with access to your home directory) to remove it:
-
-```text
-Remove the obsolete Compound Engineering Codex tool-map block from my Codex home AGENTS.md.
-
-1. Check `$CODEX_HOME/AGENTS.md` if CODEX_HOME is set, otherwise `~/.codex/AGENTS.md`. If I use Codex profiles, also check `~/.codex/profiles/*/AGENTS.md`.
-2. Look for the exact sentinels `<!-- BEGIN COMPOUND CODEX TOOL MAP -->` and `<!-- END COMPOUND CODEX TOOL MAP -->`.
-3. If both are present, delete only the span from the BEGIN line through the END line (inclusive), leaving any other user content untouched. Do not edit project/repo AGENTS.md unless those exact sentinels are present there.
-4. If the file is empty after the removal, delete the file.
-5. Show a short before/after summary of what you changed (or say the block was already absent). Do not add a replacement tool map.
-```
-
-Re-running the Bun convert/install CLI for Codex also strips the block if it is still present; it no longer inserts it.
+[Claude Code, Cursor, and Codex](#install) are at the top. Everything here is equally supported.
 
 ### Kimi Code CLI
 
