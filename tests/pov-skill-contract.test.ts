@@ -54,6 +54,12 @@ describe("ce-pov subject-shape contract", () => {
 })
 
 describe("ce-pov cross-model panel contract", () => {
+  test("uses the JSON Schema draft supported by the Claude CLI", async () => {
+    const schema = JSON.parse(await skillFile("references/pov-schema.json"))
+
+    expect(schema.$schema).toBe("http://json-schema.org/draft-07/schema#")
+  })
+
   test("pins participation counts and the complete stop-rule enum", async () => {
     const panel = await skillFile("references/cross-model-panel.md")
 

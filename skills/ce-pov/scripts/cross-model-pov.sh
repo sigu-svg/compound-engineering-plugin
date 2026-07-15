@@ -180,9 +180,8 @@ adapter_argv() {
 
 # --- --emit-adapter <route>: print the argv, no model call, no side effects --
 if [ "${1:-}" = "--emit-adapter" ]; then
-  RUN_DIR="<run-dir>"; PEER_WORKDIR="<peer-workdir>"
+  PEER_WORKDIR="<peer-workdir>"
   RAW_OUT="<peer-workdir>/pov-<provider>.raw.json"
-  OUT="<run-dir>/pov-<provider>.json"
   PROMPT_FILE="<prompt-file>"; SCHEMA_REF="<schema>"
   route="${2:-}"
   # adapter_argv emits NUL-delimited argv (can't be captured in a shell var), so
@@ -447,24 +446,36 @@ run_timeout_cmd() {   # $1 = stdin file ("" -> /dev/null). CMD already built.
   ACTIVE_PEER_PID=""
 }
 
-# Brace-match the largest {...} object containing "position" out of raw stdout.
+# Recover a POV object from raw stdout or from a string nested in a CLI envelope.
 recover_pov_json() {   # <logfile> <outfile>
   command -v python3 >/dev/null 2>&1 || return 1
   python3 - "$1" "$2" <<'PY' 2>/dev/null
 import sys, json
 txt = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-best, depth, start = None, 0, None
-for i, ch in enumerate(txt):
-    if ch == '{':
-        if depth == 0: start = i
-        depth += 1
-    elif ch == '}' and depth > 0:
-        depth -= 1
-        if depth == 0 and start is not None:
+best = None
+decoder = json.JSONDecoder()
+
+def inspect(value):
+    global best
+    if isinstance(value, dict):
+        if "position" in value:
+            best = value
+        for child in value.values():
+            inspect(child)
+    elif isinstance(value, list):
+        for child in value:
+            inspect(child)
+    elif isinstance(value, str):
+        for i, ch in enumerate(value):
+            if ch not in "{[":
+                continue
             try:
-                obj = json.loads(txt[start:i+1])
-                if isinstance(obj, dict) and "position" in obj: best = obj
-            except Exception: pass
+                child, _ = decoder.raw_decode(value, i)
+                inspect(child)
+            except Exception:
+                pass
+
+inspect(txt)
 if best is not None: open(sys.argv[2], "w").write(json.dumps(best))
 PY
   [ -s "$2" ]
@@ -594,8 +605,8 @@ run_provider() {   # <provider>
     # empty review) and, in a repeated-pass session, deprioritize an exhausted
     # route. Harness-agnostic: the agent classifies from the text; this only makes
     # the evidence visible in out.log. Surface BOTH streams -- the error can be on
-    # stdout (grok's 402) or stderr (claude/cursor auth/quota). Bash builtins only
-    # (the route sandbox has no tail/tr); both are small on a failed route.
+    # stdout (grok's 402) or stderr (claude/cursor auth/quota). The route sandbox
+    # has no tail/tr, so read the small failure output and slice it in Bash.
     if [ -s "$PEERLOG" ]; then
       _pt="$(cat "$PEERLOG")"; _pt="${_pt//$'\n'/ }"
       [ "${#_pt}" -gt 300 ] && _pt="${_pt: -300}"

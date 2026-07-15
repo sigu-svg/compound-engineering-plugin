@@ -160,6 +160,18 @@ describe("ce-pov output gate and receipts", () => {
     expect(out.reasoning).toBe("Lower correction cost")
   })
 
+  test("recovers a fenced POV nested in a CLI result envelope", () => {
+    const pov = '{"voice":"peer","position":"Choose B","reasoning":"The boundary is clearer","evidence":[],"external_check":"unavailable","mode":"independent"}'
+    const envelope = JSON.stringify({ type: "result", result: `\`\`\`json\n${pov}\n\`\`\`` })
+    const { env } = sandbox(["cursor-agent"], `#!/bin/sh\ncat >/dev/null\nprintf '%s' '${envelope}'\n`)
+    const dir = runDir()
+    const result = run(["codex", "composer", payload(), dir], dir, env)
+    expect(result.files).toContain("pov-composer.json")
+    const out = JSON.parse(readFileSync(path.join(dir, "pov-composer.json"), "utf8"))
+    expect(out.position).toBe("Choose B")
+    expect(out.reasoning).toBe("The boundary is clearer")
+  })
+
   test.each([
     ["stdout", "printf '%s' 'quota exhausted'", ""],
     ["stderr", "", "printf '%s' 'quota exhausted' >&2"],
