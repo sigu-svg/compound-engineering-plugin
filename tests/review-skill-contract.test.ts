@@ -385,6 +385,7 @@ describe("ce-code-review contract", () => {
 
     // Deterministic mechanics live in the helper, while the skill keeps the route inline.
     expect(content).toContain("scripts/findings-mechanics.py")
+    expect(content).toMatch(/^SKILL_DIR="<absolute path[^\n]+>";$/m)
     expect(mechanics).toContain("CONFIDENCES = (0, 25, 50, 75, 100)")
 
     // Confidence gate at anchor 75 with P0 exception at 50

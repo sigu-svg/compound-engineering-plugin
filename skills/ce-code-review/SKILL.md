@@ -550,7 +550,7 @@ Convert multiple reviewer compact JSON returns into one deduplicated, confidence
 Write the compact reviewer returns as a JSON array, then run:
 
 ```bash
-SKILL_DIR="<absolute path of the directory containing the SKILL.md you just read>"
+SKILL_DIR="<absolute path of the directory containing the SKILL.md you just read>";
 python3 "$SKILL_DIR/scripts/findings-mechanics.py" < "$RUN_DIR/raw-returns.json" > "$RUN_DIR/mechanical-findings.json"
 ```
 

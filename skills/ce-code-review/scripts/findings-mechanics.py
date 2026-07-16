@@ -44,7 +44,7 @@ def valid_finding(value: Any) -> bool:
     if not all(isinstance(value.get(key), expected) for key, expected in REQUIRED_FINDING.items()):
         return False
     line = value["line"]
-    line_valid = (isinstance(line, int) and line > 0) or (
+    line_valid = (type(line) is int and line > 0) or (
         isinstance(line, str) and bool(line.strip())
     )
     return (
