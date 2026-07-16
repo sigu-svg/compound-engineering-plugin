@@ -43,6 +43,8 @@ def valid_finding(value: Any) -> bool:
         return False
     if not all(isinstance(value.get(key), expected) for key, expected in REQUIRED_FINDING.items()):
         return False
+    if type(value["confidence"]) is not int:
+        return False
     line = value["line"]
     line_valid = (type(line) is int and line > 0) or (
         isinstance(line, str) and bool(line.strip())

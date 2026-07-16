@@ -192,6 +192,36 @@ describe("ce-code-review deterministic mechanics", () => {
     expect(merged.malformed_findings).toBe(1)
   })
 
+  test("findings helper rejects boolean confidence values", () => {
+    const returns = [
+      {
+        reviewer: "correctness",
+        findings: [
+          {
+            title: "Invalid boolean confidence",
+            severity: "P0",
+            file: "src/worker.ts",
+            line: 12,
+            confidence: false,
+            autofix_class: "manual",
+            owner: "human",
+            requires_verification: true,
+            pre_existing: false,
+          },
+        ],
+        residual_risks: [],
+        testing_gaps: [],
+      },
+    ]
+
+    const result = run("python3", [FINDINGS_SCRIPT], undefined, JSON.stringify(returns))
+    expect(result.status).toBe(0)
+    const merged = JSON.parse(result.stdout)
+
+    expect(merged.findings).toEqual([])
+    expect(merged.malformed_findings).toBe(1)
+  })
+
   test("findings helper keeps settled decisions, caps fast-pass, and sorts by confidence", () => {
     const returns = [
       {
