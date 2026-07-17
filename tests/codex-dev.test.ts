@@ -316,7 +316,113 @@ describe("Codex local skill collection", () => {
     await expect(
       removeManagedCollectionLink(collectionPath, inspectedTarget),
     ).rejects.toThrow("changed since it was inspected")
+    expect((await fs.lstat(collectionPath)).isFile()).toBe(true)
     expect(await fs.readFile(collectionPath, "utf8")).toBe("raced-in user content\n")
+  })
+
+  test("preserves an unrelated symlink created after a removable link was inspected", async () => {
+    const root = await makeTempRoot("codex-dev-remove-symlink-race-")
+    const collectionPath = path.join(root, "skills", "compound-engineering-local")
+    const originalTarget = path.join(root, "checkout", "skills")
+    const racedTarget = path.join(root, "user", "skills")
+    await fs.mkdir(path.dirname(collectionPath), { recursive: true })
+    await Promise.all([
+      fs.mkdir(originalTarget, { recursive: true }),
+      fs.mkdir(racedTarget, { recursive: true }),
+    ])
+    await fs.symlink(originalTarget, collectionPath, "dir")
+    const inspectedTarget = await fs.readlink(collectionPath)
+    await fs.unlink(collectionPath)
+    await fs.symlink(racedTarget, collectionPath, "dir")
+
+    await expect(
+      removeManagedCollectionLink(collectionPath, inspectedTarget),
+    ).rejects.toThrow("changed since it was inspected")
+    expect(await fs.readlink(collectionPath)).toBe(racedTarget)
+    expect(await fs.realpath(collectionPath)).toBe(await fs.realpath(racedTarget))
+  })
+
+  test("preserves a new occupant created after the expected link is atomically taken", async () => {
+    const root = await makeTempRoot("codex-dev-remove-after-take-")
+    const collectionPath = path.join(root, "skills", "compound-engineering-local")
+    const originalTarget = path.join(root, "checkout", "skills")
+    await fs.mkdir(path.dirname(collectionPath), { recursive: true })
+    await fs.mkdir(originalTarget, { recursive: true })
+    await fs.symlink(originalTarget, collectionPath, "dir")
+    const inspectedTarget = await fs.readlink(collectionPath)
+    let recoveryPath = ""
+
+    await expect(
+      removeManagedCollectionLink(collectionPath, inspectedTarget, {
+        onTakenForTest: async (takenPath) => {
+          recoveryPath = takenPath
+          await fs.writeFile(collectionPath, "new occupant\n")
+        },
+      }),
+    ).resolves.toBe(true)
+    expect(await fs.readFile(collectionPath, "utf8")).toBe("new occupant\n")
+    await expect(fs.lstat(recoveryPath)).rejects.toMatchObject({ code: "ENOENT" })
+  })
+
+  test("retains an unexpected taken entry at a reported recovery path when restoration races", async () => {
+    const root = await makeTempRoot("codex-dev-remove-recovery-race-")
+    const collectionPath = path.join(root, "skills", "compound-engineering-local")
+    const expectedTarget = path.join(root, "checkout", "skills")
+    const racedTarget = path.join(root, "user", "skills")
+    await fs.mkdir(path.dirname(collectionPath), { recursive: true })
+    await Promise.all([
+      fs.mkdir(expectedTarget, { recursive: true }),
+      fs.mkdir(racedTarget, { recursive: true }),
+    ])
+    await fs.symlink(racedTarget, collectionPath, "dir")
+    let recoveryPath = ""
+
+    const removal = removeManagedCollectionLink(collectionPath, expectedTarget, {
+      onTakenForTest: async (takenPath) => {
+        recoveryPath = takenPath
+        await fs.writeFile(collectionPath, "new occupant\n")
+      },
+    })
+
+    let removalError: unknown
+    try {
+      await removal
+    } catch (error) {
+      removalError = error
+    }
+    expect(recoveryPath).not.toBe("")
+    expect(removalError).toBeInstanceOf(Error)
+    expect((removalError as Error).message).toContain(`preserved at ${recoveryPath}`)
+    expect((removalError as Error).message).toContain("the current entry at")
+    expect(await fs.readFile(collectionPath, "utf8")).toBe("new occupant\n")
+    expect(await fs.readlink(recoveryPath)).toBe(racedTarget)
+  })
+
+  test("reports the recovery path if deterministic post-take test setup fails", async () => {
+    const root = await makeTempRoot("codex-dev-remove-test-hook-")
+    const collectionPath = path.join(root, "skills", "compound-engineering-local")
+    const expectedTarget = path.join(root, "checkout", "skills")
+    await fs.mkdir(path.dirname(collectionPath), { recursive: true })
+    await fs.mkdir(expectedTarget, { recursive: true })
+    await fs.symlink(expectedTarget, collectionPath, "dir")
+    let recoveryPath = ""
+
+    const removal = removeManagedCollectionLink(collectionPath, expectedTarget, {
+      onTakenForTest: async (takenPath) => {
+        recoveryPath = takenPath
+        throw new Error("injected failure")
+      },
+    })
+
+    let removalError: unknown
+    try {
+      await removal
+    } catch (error) {
+      removalError = error
+    }
+    expect(removalError).toBeInstanceOf(Error)
+    expect((removalError as Error).message).toContain(`preserved at ${recoveryPath}`)
+    expect(await fs.readlink(recoveryPath)).toBe(expectedTarget)
   })
 })
 

@@ -282,33 +282,102 @@ export type ManagedCollectionLinkExpectation =
 export async function removeManagedCollectionLink(
   collectionPath: string,
   expectedTarget: string,
-  options: { ignoreChanges?: boolean } = {},
+  options: {
+    ignoreChanges?: boolean
+    onTakenForTest?: (recoveryPath: string) => Promise<void>
+  } = {},
 ): Promise<boolean> {
-  const changed = (): false => {
+  const changed = (detail?: string): false => {
     if (options.ignoreChanges) return false
-    throw new Error(`${collectionPath} changed since it was inspected; refusing to remove it`)
+    throw new Error(
+      `${collectionPath} changed since it was inspected; refusing to remove it${detail ? `. ${detail}` : ""}`,
+    )
   }
 
-  let stat
+  const parentPath = path.dirname(collectionPath)
+  const recoveryDir = await fs.mkdtemp(
+    path.join(parentPath, `.${path.basename(collectionPath)}.recovery-`),
+  )
+  const recoveryPath = path.join(recoveryDir, "entry")
+
   try {
-    stat = await fs.lstat(collectionPath)
+    await fs.rename(collectionPath, recoveryPath)
   } catch (error) {
+    await fs.rmdir(recoveryDir).catch(() => undefined)
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return changed()
     throw error
   }
-  if (!stat.isSymbolicLink()) return changed()
 
-  let actualTarget
   try {
-    actualTarget = await fs.readlink(collectionPath)
+    await options.onTakenForTest?.(recoveryPath)
   } catch (error) {
-    if (["EINVAL", "ENOENT"].includes((error as NodeJS.ErrnoException).code ?? "")) return changed()
-    throw error
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `Could not validate ${collectionPath} after taking it. ` +
+        `The entry is preserved at ${recoveryPath} (${reason})`,
+    )
   }
-  if (actualTarget !== expectedTarget) return changed()
 
-  await fs.unlink(collectionPath)
-  return true
+  const stat = await fs.lstat(recoveryPath)
+  let actualTarget: string | undefined
+  if (stat.isSymbolicLink()) {
+    actualTarget = await fs.readlink(recoveryPath)
+  }
+
+  if (stat.isSymbolicLink() && actualTarget === expectedTarget) {
+    await fs.unlink(recoveryPath)
+    await fs.rmdir(recoveryDir)
+    return true
+  }
+
+  const restorationFailed = (error: unknown): never => {
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `${collectionPath} changed since it was inspected; refusing to remove it. ` +
+        `The entry taken for validation is preserved at ${recoveryPath}; ` +
+        `the current entry at ${collectionPath} was not overwritten (${reason})`,
+    )
+  }
+
+  if (stat.isSymbolicLink()) {
+    try {
+      await fs.symlink(actualTarget!, collectionPath)
+    } catch (error) {
+      restorationFailed(error)
+    }
+    await fs.unlink(recoveryPath)
+    await fs.rmdir(recoveryDir)
+    return changed()
+  }
+
+  if (stat.isFile()) {
+    try {
+      await fs.link(recoveryPath, collectionPath)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") restorationFailed(error)
+      try {
+        // Preserve accessibility when the filesystem does not support hard links.
+        await fs.symlink(recoveryPath, collectionPath, "file")
+      } catch (fallbackError) {
+        restorationFailed(fallbackError)
+      }
+      return changed(
+        `The unexpected entry is preserved at ${recoveryPath} and remains accessible at ${collectionPath}`,
+      )
+    }
+    await fs.unlink(recoveryPath)
+    await fs.rmdir(recoveryDir)
+    return changed()
+  }
+
+  try {
+    await fs.symlink(recoveryPath, collectionPath, stat.isDirectory() ? "dir" : "file")
+  } catch (error) {
+    restorationFailed(error)
+  }
+  return changed(
+    `The unexpected entry is preserved at ${recoveryPath} and remains accessible at ${collectionPath}`,
+  )
 }
 
 export async function replaceManagedCollectionLink(
