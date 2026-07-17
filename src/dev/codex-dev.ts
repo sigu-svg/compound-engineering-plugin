@@ -259,6 +259,7 @@ export async function inspectLocalCollection(context: CodexDevContext): Promise<
 
 export async function activateLocalCollection(context: CodexDevContext): Promise<void> {
   await fs.mkdir(path.dirname(context.collectionPath), { recursive: true })
+  const desiredTarget = await fs.realpath(context.skillsRoot)
   const state = await inspectLocalCollection(context)
   if (state.kind === "collision") {
     throw new Error(`${context.collectionPath} exists and is not a symlink; refusing to overwrite it`)
@@ -269,9 +270,9 @@ export async function activateLocalCollection(context: CodexDevContext): Promise
   if (state.kind === "broken") {
     throw new Error(`${context.collectionPath} is a broken symlink; refusing to overwrite it`)
   }
-  if (state.kind === "valid" && state.resolvedTarget === (await fs.realpath(context.skillsRoot))) return
+  if (state.kind === "valid" && state.resolvedTarget === desiredTarget) return
 
-  await replaceCollectionLink(context.collectionPath, context.skillsRoot)
+  await replaceCollectionLink(context.collectionPath, desiredTarget)
 }
 
 async function replaceCollectionLink(collectionPath: string, target: string): Promise<void> {
@@ -288,10 +289,17 @@ async function replaceCollectionLink(collectionPath: string, target: string): Pr
 async function restoreLocalCollection(
   context: CodexDevContext,
   previous: Extract<LocalCollectionState, { kind: "absent" | "valid" }>,
+  activatedTarget: string,
 ): Promise<void> {
   if (previous.kind === "absent") {
-    const current = await inspectLocalCollection(context)
-    if (current.kind === "valid") await fs.unlink(context.collectionPath)
+    try {
+      const stat = await fs.lstat(context.collectionPath)
+      if (stat.isSymbolicLink() && (await fs.readlink(context.collectionPath)) === activatedTarget) {
+        await fs.unlink(context.collectionPath)
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+    }
     return
   }
   await replaceCollectionLink(context.collectionPath, previous.target)
@@ -404,6 +412,7 @@ export async function switchToLocal(
   if (previous.kind !== "absent" && previous.kind !== "valid") {
     throw new Error(`Cannot switch to local mode while the local collection is ${previous.kind}`)
   }
+  const activatedTarget = await fs.realpath(context.skillsRoot)
   await activateLocalCollection(context)
   try {
     const plugins = await listCompoundEngineeringPlugins(context, runner)
@@ -414,7 +423,7 @@ export async function switchToLocal(
     }
     return status
   } catch (error) {
-    await restoreLocalCollection(context, previous)
+    await restoreLocalCollection(context, previous, activatedTarget)
     throw error
   }
 }

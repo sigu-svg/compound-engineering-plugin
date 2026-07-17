@@ -108,6 +108,7 @@ class StatefulCodexRunner implements CommandRunner {
   calls: string[][] = []
   failAdd = false
   failRemove: string | null = null
+  beforeFailedRemove?: () => Promise<void>
 
   constructor(plugins: InstalledPlugin[] = [], marketplaces: typeof officialMarketplace[] = []) {
     this.plugins = [...plugins]
@@ -125,7 +126,10 @@ class StatefulCodexRunner implements CommandRunner {
       return { exitCode: 0, stdout: JSON.stringify({ marketplaces: this.marketplaces }), stderr: "" }
     }
     if (args[0] === "plugin" && args[1] === "remove") {
-      if (this.failRemove === args[2]) return { exitCode: 1, stdout: "", stderr: "remove failed" }
+      if (this.failRemove === args[2]) {
+        await this.beforeFailedRemove?.()
+        return { exitCode: 1, stdout: "", stderr: "remove failed" }
+      }
       this.plugins = this.plugins.filter((entry) => entry.pluginId !== args[2])
       return { exitCode: 0, stdout: "{}", stderr: "" }
     }
@@ -331,6 +335,36 @@ describe("Codex development installation transitions", () => {
 
     await expect(switchToLocal(context, runner)).rejects.toThrow("remove failed")
     expect((await inspectLocalCollection(context)).kind).toBe("absent")
+  })
+
+  test("removes its newly created link during rollback even if the target becomes broken", async () => {
+    const context = await makeContext()
+    const runner = new StatefulCodexRunner([plugin("compound-engineering@personal")])
+    const movedSkills = `${context.skillsRoot}.moved`
+    runner.failRemove = "compound-engineering@personal"
+    runner.beforeFailedRemove = async () => {
+      await fs.rename(context.skillsRoot, movedSkills)
+    }
+
+    await expect(switchToLocal(context, runner)).rejects.toThrow("remove failed")
+    await expect(fs.lstat(context.collectionPath)).rejects.toMatchObject({ code: "ENOENT" })
+    expect((await fs.stat(movedSkills)).isDirectory()).toBe(true)
+  })
+
+  test("leaves a replacement symlink in place during rollback", async () => {
+    const context = await makeContext()
+    const replacement = path.join(path.dirname(context.repoRoot), "replacement skills")
+    const runner = new StatefulCodexRunner([plugin("compound-engineering@personal")])
+    runner.failRemove = "compound-engineering@personal"
+    runner.beforeFailedRemove = async () => {
+      await fs.mkdir(replacement, { recursive: true })
+      await fs.unlink(context.collectionPath)
+      await fs.symlink(replacement, context.collectionPath, "dir")
+    }
+
+    await expect(switchToLocal(context, runner)).rejects.toThrow("remove failed")
+    expect(await fs.readlink(context.collectionPath)).toBe(replacement)
+    expect(await fs.realpath(context.collectionPath)).toBe(await fs.realpath(replacement))
   })
 
   test("reports mixed state and remove clears only CE-managed surfaces", async () => {
