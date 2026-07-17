@@ -30,6 +30,14 @@ describe("ce-pov subject-shape contract", () => {
     expect(skill).not.toContain("repo-profile-cache")
   })
 
+  test("semantic cross-model requests activate without the oracle shorthand", async () => {
+    const skill = await skillFile("SKILL.md")
+    const frontmatter = skill.split("---", 3)[1] ?? ""
+
+    expect(frontmatter).toContain("consult other models")
+    expect(frontmatter).toContain("reconcile their opinions")
+  })
+
   test("the always-loaded Phase 0 frame names the document and approach intents", async () => {
     const skill = await skillFile("SKILL.md")
     const phaseZero = between(skill, "### Phase 0: Frame and Classify", "### Phase 1: Ground")
@@ -84,9 +92,10 @@ describe("ce-pov cross-model panel contract", () => {
 
     expect(phaseThree).toContain("may qualify for a proactive offer")
     expect(phaseThree).toContain("before resolving participation or deciding whether to offer")
-    expect(phaseThree).toContain("explicitly named peers proceed after notice without a second question")
-    expect(phaseThree).toMatch(/auto-selected peers, and any route that adds or changes a recipient or intermediary, require user approval/)
-    expect(phaseThree).toMatch(/peers stay read-only/i)
+    expect(phaseThree).toContain("authorizes the panel protocol's normal read-only consultation")
+    expect(phaseThree).toContain("Announce the selected peers before dispatch")
+    expect(phaseThree).toMatch(/ask only when a retry adds an unexpected recipient or intermediary/)
+    expect(phaseThree).toContain("shared working tree")
   })
 
   test("forms an independent solo POV before the panel and emits only after it finishes", async () => {
@@ -100,7 +109,9 @@ describe("ce-pov cross-model panel contract", () => {
     expect(formSolo).toBeGreaterThan(-1)
     expect(runPanel).toBeGreaterThan(formSolo)
     expect(emitFinal).toBeGreaterThan(runPanel)
-    expect(phaseThree).toContain("independently formed position")
+    expect(phaseThree).toContain("Freeze that position")
+    expect(phaseThree).toMatch(/Keep it out of an independent peer's initial context/)
+    expect(phaseThree).toMatch(/critique that position|reconciliation round/)
   })
 
   test("follow-up covers every subject shape while retaining adoption tier gates", async () => {
@@ -143,6 +154,8 @@ describe("ce-pov cross-model panel contract", () => {
   test("pins participation counts and the complete stop-rule enum", async () => {
     const panel = await skillFile("references/cross-model-panel.md")
 
+    expect(panel).toContain("shorthand for the panel behavior, not a keyword gate")
+    expect(panel).toMatch(/consult other models.*independent peer opinions.*reconcile their disagreement/s)
     expect(panel).toMatch(/Named peers:\*\* exact and uncapped/)
     expect(panel).toContain("up to two reachable")
     for (const stop of ["**`confident`**", "**`no-movement`**", "**`cap-2`**"]) {
@@ -163,22 +176,45 @@ describe("ce-pov cross-model panel contract", () => {
     expect(prose).toMatch(/five succinct.*source-attributed evidence bullets per voice/)
   })
 
-  test("pins fixed-route privacy notice, consent, and reconcile disclosure", async () => {
+  test("pins fixed-route announcement and bounded authority without secrecy claims", async () => {
     const panel = await skillFile("references/cross-model-panel.md")
     const prose = compact(panel)
 
     expect(prose).toContain("Resolve one concrete target")
-    expect(prose).toContain("every actual recipient")
-    expect(prose).toContain("privacy notice")
-    expect(prose).toMatch(/Explicitly named peers:.*proceed.*without.*second question/)
-    expect(prose).toMatch(/Auto-selected peers:.*ask before/)
-    expect(prose).toMatch(/cannot edit|remain read-only/)
-    expect(prose).toContain("technically enforced")
+    expect(prose).toContain("Announce the selected target and route")
+    expect(prose).toMatch(/Invoking `oracle` authorizes.*read-only consultation/)
+    expect(prose).toMatch(/retry would add an unexpected recipient or intermediary.*ask/)
+    expect(prose).toMatch(/read-only|may not mutate/)
     expect(prose).toContain("cooperative")
-    expect(prose).toMatch(/Do not expose.*CLI versions.*commit hashes.*route health/)
-    expect(prose).toMatch(/does not suppress.*concise observed failure state.*partial or unavailable panel result/)
-    expect(prose).toMatch(/reconcile round additionally shares every surviving voice's position,.*reasoning, and bounded evidence summaries/)
+    expect(prose).toMatch(/never promise that secrets.*are inaccessible/)
+    expect(panel).not.toContain("privacy notice")
+    expect(prose).toMatch(/Do not recite.*CLI versions.*commit hashes.*route health/)
     expect(prose).toContain("return failure to the host")
+  })
+
+  test("keeps initial independent payloads blind while critique and reconciliation expose positions", async () => {
+    const panel = await skillFile("references/cross-model-panel.md")
+    const dispatch = between(panel, "## 4. Dispatch, wait, reap, and collect", "## 5. Detect dissent")
+    const prose = compact(dispatch)
+
+    expect(prose).toMatch(/initial `independent` round, exclude ce-pov's position and every other voice's conclusion/)
+    expect(prose).toMatch(/proposal, document, or approach set.*subject.*fully available/)
+    expect(prose).toMatch(/For `skeptic` mode, include ce-pov's position/)
+    expect(prose).toMatch(/Reconciliation payloads.*include already-formed positions/)
+    expect(prose).toMatch(/Do not duplicate readable files/)
+  })
+
+  test("uses the default reconciliation cap as a user-extensible checkpoint", async () => {
+    const panel = await skillFile("references/cross-model-panel.md")
+    const reconcile = between(panel, "## 5. Detect dissent", "## 6. Decide and disclose")
+    const prose = compact(reconcile)
+
+    expect(prose).toMatch(/independent initial round plus at most two reconcile exchanges/)
+    expect(prose).toMatch(/"one pass" or "one round" means no reconcile exchange/)
+    expect(prose).toContain("cap stops automatic dispatch")
+    expect(prose).toMatch(/Recommend a specific number of additional exchanges only when/)
+    expect(prose).toMatch(/Further rounds require user approval/)
+    expect(prose).toMatch(/new finite cap, never an open-ended loop/)
   })
 
   test("keeps include and exclude path filters explicitly cooperative in the worker prompt", async () => {
@@ -237,7 +273,7 @@ describe("ce-pov cross-model panel contract", () => {
     expect(prose).toContain("declared preferred mapping first")
     expect(prose).toContain("same requested target")
     expect(prose).toContain("independence_verified")
-    expect(prose).toContain("disclose and sanction the new actual route")
+    expect(prose).toMatch(/unexpected recipient or intermediary.*ask/)
     expect(prose).toContain("return failure to the host")
   })
 

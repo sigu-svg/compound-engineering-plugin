@@ -196,12 +196,13 @@ adapter_argv() {
       ;;
     claude)
       # --tools "" disables ALL built-in tools (allowlist deny-all, no denylist gap
-      # like Glob/Grep); --bare skips project auto-discovery (CLAUDE.md, hooks, MCP,
-      # plugins, auto-memory); the run cd's into the empty per-peer workspace (claude
-      # has no cwd flag) so even an unlisted tool has no repo -- or sibling peer's
-      # fold-in artifact -- in reach. R17 tool-less isolation.
+      # like Glob/Grep); --safe-mode suppresses hooks, MCP, plugins, and other
+      # custom behavior without bypassing Claude Code's normal OAuth/keychain auth.
+      # The run cd's into the empty per-peer workspace (claude has no cwd flag), so
+      # the peer has no repo -- or sibling peer's fold-in artifact -- in reach.
+      # R17 tool-less isolation.
       printf '%s\0' claude -p --model "$(route_model claude)" --effort high --permission-mode dontAsk \
-        --bare --tools "" \
+        --safe-mode --disable-slash-commands --tools "" \
         --max-turns 15 --no-session-persistence --json-schema "$SCHEMA_REF" --output-format json
       ;;
     grok-cli)
@@ -736,27 +737,47 @@ run_provider() {   # <provider>
     log "wrote $n finding(s) to $OUT (reviewer $REVIEWER_NAME-$provider)"
   else
     log "provider $provider produced no usable schema-shaped output; skipping fold-in"
-    # Surface a bounded tail of the peer's raw output so the orchestrator can
+    # Surface bounded peer output so the orchestrator can
     # reason about WHY it was skipped (quota/usage-limit exhaustion vs an ordinary
     # empty review) and, in a repeated-pass session, deprioritize an exhausted
     # route. Harness-agnostic: the agent classifies from the text; this only makes
     # the evidence visible in out.log. Surface BOTH streams -- the error can be on
     # stdout (grok's 402) or stderr (claude/cursor auth/quota). Bash builtins only
-    # (the route sandbox has no tail/tr); both are small on a failed route.
+    # (the route sandbox has no tail/tr). Prefer structured error fields because
+    # a raw tail can discard the actionable message in a large CLI envelope.
     if [ -s "$PEERLOG" ]; then
-      _pt="$(< "$PEERLOG")"; _pt="${_pt//$'\n'/ }"
-      [ "${#_pt}" -gt 300 ] && _pt="${_pt: -300}"
+      _pt="$(bounded_failure_evidence "$PEERLOG")"
       log "  peer skip evidence: $_pt"
     fi
     if [ -s "$PEERERR" ]; then
-      _pe="$(< "$PEERERR")"; _pe="${_pe//$'\n'/ }"
-      [ "${#_pe}" -gt 300 ] && _pe="${_pe: -300}"
+      _pe="$(bounded_failure_evidence "$PEERERR")"
       log "  peer skip evidence (stderr): $_pe"
     fi
     rm -f "$OUT" "$RAW_OUT"
   fi
   # Tear down the per-peer workspace (never RUN_DIR, which holds the published OUT).
   [ -n "$PEER_WORKDIR" ] && [ "$PEER_WORKDIR" != "$RUN_DIR" ] && rm -rf "$PEER_WORKDIR"
+}
+
+# Prefer structured CLI diagnostics over a raw tail, which can hide the useful
+# error near the beginning of a large JSON envelope.
+bounded_failure_evidence() {   # <logfile>
+  local path="$1" evidence
+  evidence="$(jq -r '
+    [
+      (.result? | select(type == "string" and length > 0)),
+      (.message? | select(type == "string" and length > 0)),
+      (.error?.message? | select(type == "string" and length > 0)),
+      (if .api_error_status? != null then "api_error_status=\(.api_error_status)" else empty end),
+      (.terminal_reason? | select(type == "string" and length > 0) | "terminal_reason=" + .)
+    ] | unique | join(" | ")
+  ' "$path" 2>/dev/null)"
+  [ -n "$evidence" ] || evidence="$(cat "$path")"
+  evidence="${evidence//$'\n'/ }"
+  if [ "${#evidence}" -gt 300 ]; then
+    evidence="${evidence:0:147} ... ${evidence: -147}"
+  fi
+  printf '%s' "$evidence"
 }
 
 # --- run the host-sanctioned fixed target -----------------------------------

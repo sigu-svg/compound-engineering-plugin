@@ -195,7 +195,7 @@ adapter_argv() {
       # and bounded public web checks. Mutating tools, Bash, MCP, and subagents are
       # absent from the allowlist.
       printf '%s\0' claude -p --model "$(route_model claude)" --effort high --permission-mode dontAsk \
-        --bare --tools Read,Glob,Grep,WebSearch,WebFetch \
+        --safe-mode --disable-slash-commands --tools Read,Glob,Grep,WebSearch,WebFetch \
         --max-turns 15 --no-session-persistence --json-schema "$SCHEMA_REF" --output-format json
       ;;
     grok-cli)
@@ -578,6 +578,25 @@ parse_structured() {   # <logfile> <outfile>
   recover_pov_json "$1" "$2"
 }
 
+bounded_failure_evidence() {   # <logfile>; prefer structured diagnostics, then bounded head+tail
+  local path="$1" evidence
+  evidence="$(jq -r '
+    [
+      (.result? | select(type == "string" and length > 0)),
+      (.message? | select(type == "string" and length > 0)),
+      (.error?.message? | select(type == "string" and length > 0)),
+      (if .api_error_status? != null then "api_error_status=\(.api_error_status)" else empty end),
+      (.terminal_reason? | select(type == "string" and length > 0) | "terminal_reason=" + .)
+    ] | unique | join(" | ")
+  ' "$path" 2>/dev/null)"
+  [ -n "$evidence" ] || evidence="$(cat "$path")"
+  evidence="${evidence//$'\n'/ }"
+  if [ "${#evidence}" -gt 300 ]; then
+    evidence="${evidence:0:147} ... ${evidence: -147}"
+  fi
+  printf '%s' "$evidence"
+}
+
 # Run one route for a provider; leaves a schema-shaped (pre-normalization) $RAW_OUT on success.
 attempt_route() {   # <provider> <route>
   local provider="$1" route="$2" note
@@ -677,21 +696,19 @@ run_fixed_route() {
     log "wrote peer POV to $OUT (voice peer-$provider)"
   else
     log "provider $provider produced no usable schema-shaped output; skipping fold-in"
-    # Surface a bounded tail of the peer's raw output so the orchestrator can
+    # Surface bounded, actionable peer evidence so the orchestrator can
     # reason about WHY it was skipped (quota/usage-limit exhaustion vs an ordinary
     # empty review) and, in a repeated-pass session, deprioritize an exhausted
-    # route. Harness-agnostic: the agent classifies from the text; this only makes
-    # the evidence visible in out.log. Surface BOTH streams -- the error can be on
-    # stdout (grok's 402) or stderr (claude/cursor auth/quota). The route sandbox
-    # has no tail/tr, so read the small failure output and slice it in Bash.
+    # route. Prefer structured CLI error fields before the bounded raw fallback;
+    # a useful `.result` can appear near the start of a long JSON envelope. Surface
+    # BOTH streams -- the error can be on stdout (grok's 402) or stderr
+    # (claude/cursor auth/quota).
     if [ -s "$PEERLOG" ]; then
-      _pt="$(cat "$PEERLOG")"; _pt="${_pt//$'\n'/ }"
-      [ "${#_pt}" -gt 300 ] && _pt="${_pt: -300}"
+      _pt="$(bounded_failure_evidence "$PEERLOG")"
       log "  peer skip evidence: $_pt"
     fi
     if [ -s "$PEERERR" ]; then
-      _pe="$(cat "$PEERERR")"; _pe="${_pe//$'\n'/ }"
-      [ "${#_pe}" -gt 300 ] && _pe="${_pe: -300}"
+      _pe="$(bounded_failure_evidence "$PEERERR")"
       log "  peer skip evidence (stderr): $_pe"
     fi
     rm -f "$OUT" "$RAW_OUT"
