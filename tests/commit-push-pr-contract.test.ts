@@ -7,6 +7,23 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 describe("ce-commit-push-pr contract", () => {
+  test("repository PR-body contracts set structure without replacing editorial guidance", async () => {
+    const content = await readRepoFile(
+      "skills/ce-commit-push-pr/references/pr-description-writing.md",
+    )
+
+    const contractIndex = content.indexOf("## Project PR-body contract")
+    expect(contractIndex).toBeGreaterThan(-1)
+    expect(contractIndex).toBeLessThan(content.indexOf("## Step Pre-A"))
+    expect(content).toMatch(/template as a minimum.+exact\/template-only body/is)
+    expect(content).toContain("add no sections beyond those the project permits")
+    expect(content).toMatch(/structural floor.+sizes the content within it/is)
+    expect(content).toMatch(/Step C:[\s\S]+preserve that structure.+sections it permits/i)
+    expect(content).toMatch(/project PR-body contract supplies a heading or location for the opening.+place it there without inventing or renaming a heading/is)
+    expect(content).toMatch(/Otherwise, the opening goes under `## Summary`.+bare paragraph/is)
+    expect(content).toMatch(/Step E:[\s\S]+except for headings, fields, checklists, or boilerplate.+requires/i)
+  })
+
   test("existing PR rewrites carry the old body into composition", async () => {
     const content = await readRepoFile("skills/ce-commit-push-pr/SKILL.md")
 
