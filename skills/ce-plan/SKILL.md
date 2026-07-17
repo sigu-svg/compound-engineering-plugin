@@ -314,10 +314,9 @@ Run these agents in parallel:
 Do **not** dispatch for cosmetic, layout-only, animation-only, brand, low-value preference, or narrow work in a product with no agent surface. If the signal is borderline, do not dispatch; carry only a short future parity consideration when it affects a high-value domain action. Include any resulting findings in consolidation as planning inputs, not as a standalone advice appendix.
 
 Collect:
-- Technology stack and versions (used in section 1.2 to make sharper external research decisions)
-- Architectural patterns and conventions to follow
-- Implementation patterns, relevant files, modules, and tests
-- AGENTS.md guidance that materially affects the plan, with CLAUDE.md used only as compatibility fallback when present
+- Exact dependency or runtime versions only when they materially affect the plan or an external research decision
+- Relevant architecture and implementation patterns, files, modules, and tests for the requested scope
+- Applicable constraints from the project's active instructions and context
 - Institutional learnings from `docs/solutions/`
 - Product strategy context when `STRATEGY.md` is present — flag any plan decisions that pull away from the active tracks or the stated approach
 - Agent-native planning findings when the conditional triage dispatched: action/context parity decisions, tool/workspace/execution-lifecycle choices, scope boundaries, and verification scenarios

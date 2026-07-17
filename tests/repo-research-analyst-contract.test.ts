@@ -19,3 +19,14 @@ test("repo research runs Phase 0 only when in scope", () => {
     expect(prompt).toContain(PHASE_ZERO_SCOPE_CONTRACT)
   }
 })
+
+test("ce-plan collects versions only when materially relevant", () => {
+  const skill = readFileSync(
+    path.join(process.cwd(), "skills", "ce-plan", "SKILL.md"),
+    "utf8",
+  )
+  expect(skill).not.toContain("- Technology stack and versions")
+  expect(skill).toContain(
+    "- Exact dependency or runtime versions only when they materially affect the plan or an external research decision",
+  )
+})
