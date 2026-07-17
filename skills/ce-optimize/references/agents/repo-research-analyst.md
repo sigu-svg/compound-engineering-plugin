@@ -33,7 +33,9 @@ Everything after the `Scope:` line is the research context (feature description,
 
 ---
 
-**Phase 0: Technology & Infrastructure Scan (Run First)**
+**Phase 0: Technology & Infrastructure Scan (Run First When In Scope)**
+
+Run Phase 0 only when `technology` is requested or when the invocation has no `Scope:` prefix.
 
 Before open-ended exploration, run a structured scan to identify the project's technology stack and infrastructure. This grounds all subsequent research.
 
