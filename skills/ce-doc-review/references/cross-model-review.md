@@ -63,7 +63,12 @@ Invoke via the skill-dir anchor — set `SKILL_DIR` to the absolute directory of
 
 ```bash
 SKILL_DIR="<absolute path of the directory containing the ce-doc-review SKILL.md you read>";
-CROSS_MODEL_HOST_HARNESS="<host-harness>" CROSS_MODEL_FIXED_ROUTE="<fixed-route>" python3 "$SKILL_DIR/scripts/peer-job-runner.py" start --skill ce-doc-review --run-id "<run-id>" --label "<reviewer-name>" -- env CROSS_MODEL_HOST_HARNESS="<host-harness>" CROSS_MODEL_FIXED_ROUTE="<fixed-route>" bash "$SKILL_DIR/scripts/cross-model-doc-review.sh" "<host-serving-family>" "<target>" "<reviewer-name>" "<document-path>" "<document-type>" "<origin>" "<run-dir>"
+SCRATCH_ROOT="/tmp/compound-engineering-$(id -u)";
+if [ -L "$SCRATCH_ROOT" ]; then echo "unsafe scratch root symlink: $SCRATCH_ROOT" >&2; exit 1; fi;
+install -d -m 700 "$SCRATCH_ROOT" || exit 1;
+if [ -L "$SCRATCH_ROOT" ] || [ ! -O "$SCRATCH_ROOT" ]; then echo "scratch root is not owned by the current user: $SCRATCH_ROOT" >&2; exit 1; fi;
+RUN_DIR="$SCRATCH_ROOT/ce-doc-review/<run-id>"; (umask 077; mkdir -p "$RUN_DIR") || exit 1; chmod 700 "$RUN_DIR" || exit 1;
+CROSS_MODEL_HOST_HARNESS="<host-harness>" CROSS_MODEL_FIXED_ROUTE="<fixed-route>" python3 "$SKILL_DIR/scripts/peer-job-runner.py" start --skill ce-doc-review --run-id "<run-id>" --label "<reviewer-name>" -- env CROSS_MODEL_HOST_HARNESS="<host-harness>" CROSS_MODEL_FIXED_ROUTE="<fixed-route>" bash "$SKILL_DIR/scripts/cross-model-doc-review.sh" "<host-serving-family>" "<target>" "<reviewer-name>" "<document-path>" "<document-type>" "<origin>" "$RUN_DIR"
 ```
 
 Omit `--result-path`; `done` means only that the worker exited. The fixed target determines the expected `<reviewer-name>-<target>.json` filename.
@@ -74,7 +79,7 @@ Omit `--result-path`; `done` means only that the worker exited. The fixed target
 - `<document-path>` = the document under review.
 - `<document-type>` = the Phase 1 classification (`requirements` / `plan` / `unified-requirements` / `unified-plan`).
 - `<origin>` = the same `{origin_path}` slot the in-process personas receive.
-- `<run-dir>` = a run scratch dir (e.g. `/tmp/compound-engineering/ce-doc-review/<run-id>/`). The script writes `<reviewer-name>-<provider>.json` there per resolved peer **only after** forcing `reviewer` to `<reviewer-name>-<provider>` and downgrading peer `safe_auto` → `gated_auto`.
+- `<run-dir>` = the absolute `$RUN_DIR` resolved above. The script writes `<reviewer-name>-<provider>.json` there per resolved peer **only after** forcing `reviewer` to `<reviewer-name>-<provider>` and downgrading peer `safe_auto` → `gated_auto`.
 
 Every runner call is bounded — no tool call ever spans a worker's runtime, on any host. Between dispatch waves, poll outstanding jobs (it returns early when the watched jobs settle):
 
@@ -85,7 +90,7 @@ python3 "$SKILL_DIR/scripts/peer-job-runner.py" wait --max-secs 30 --json <job-i
 
 Capture the epoch time right after the final `start` (`date +%s`) — that anchor is how you know when the deadline passes, since nothing else tracks wall clock across tool calls. At synthesis, loop bounded `wait` calls until every job is terminal **or 610 seconds have elapsed since the final `start`** (compare `date +%s` against the anchor before each slice) (do not begin a `wait` slice that would extend past the deadline — reap instead); at that deadline, `reap` each job still nonterminal, then run one final bounded `wait --max-secs 10` pass (reap is asynchronous — the terminal record lands a grace period after it returns), then fold in whichever `<reviewer-name>-<provider>.json` files exist in `<run-dir>`. The detached script still self-bounds (codex idle-timeout default 180s with reasoning forced on for liveness; hard backstop `CROSS_MODEL_HARD_SECS` default 600s) and exits cleanly; the runner's supervisor windows sit outside those caps as the backstop. The script needs no prompt or schema passed in — it reads the persona brief, `findings-schema.json`, and the document itself from disk.
 
-Any started job whose terminal state is not `done` (`failed` / `timeout` / `died-without-result` — a job reaped at the deadline records `timeout`, with the reap noted in its reason; a preflight failure never yields a job id, so `never-started` is the silent-skip case, not a named one) is named in the Coverage line with its lens and terminal state (e.g. "cross-model security-lens peer: timeout"); silent absence remains correct only for passes that were never started (gate not met / skip). A missing fold-in file is still "the pass didn't run for that lens," never a review failure. After fold-in, delete the consumed job dirs under `/tmp/compound-engineering/ce-doc-review/<run-id>/jobs` (use the environment's preferred deletion command).
+Any started job whose terminal state is not `done` (`failed` / `timeout` / `died-without-result` — a job reaped at the deadline records `timeout`, with the reap noted in its reason; a preflight failure never yields a job id, so `never-started` is the silent-skip case, not a named one) is named in the Coverage line with its lens and terminal state (e.g. "cross-model security-lens peer: timeout"); silent absence remains correct only for passes that were never started (gate not met / skip). A missing fold-in file is still "the pass didn't run for that lens," never a review failure. After fold-in, delete the consumed job dirs under `<run-dir>/jobs` (use the environment's preferred deletion command).
 
 The cross-model pass does **not** receive the accumulated decision primer that in-process personas get on round 2+ — the peer prompt carries a round-1 framing regardless of round. This is deliberate (cross-model is most valuable on the first pass), and synthesis's own R29/R30 suppression is the authoritative backstop for re-raised or already-resolved findings, so a peer that re-raises a prior-round-rejected finding is dropped at synthesis, not surfaced.
 

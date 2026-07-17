@@ -141,7 +141,8 @@ describe("ce-code-review contract", () => {
     expect(content).toContain("mode:agent")
     expect(content).toContain("apply:local")
     expect(content).toContain("mode:headless")
-    expect(content).toContain("/tmp/compound-engineering/ce-code-review/<run-id>/")
+    expect(content).toContain('SCRATCH_ROOT="/tmp/compound-engineering-$(id -u)"')
+    expect(content).toContain('RUN_DIR="$SCRATCH_ROOT/ce-code-review/$RUN_ID"')
     expect(content).toMatch(/Never push, open PRs, or file tickets/i)
     expect(content).toContain("run artifact")
     expect(content).toMatch(/check out the PR branch/i)
@@ -750,7 +751,7 @@ describe("ce-code-review contract", () => {
 
   test("JSON-pipeline prompt assets stay frontmatter-free while template permits artifact write", async () => {
     // The ce-code-review subagent template instructs each persona to write its full
-    // analysis to /tmp/compound-engineering/ce-code-review/{run_id}/{reviewer}.json.
+    // analysis to the absolute {run_dir}/{reviewer}.json supplied by the orchestrator.
     // Prompt assets no longer carry tool frontmatter; the caller/template owns
     // artifact-write permission in the generic subagent dispatch.
     const skill = await readCodeReviewRuntimeContract()

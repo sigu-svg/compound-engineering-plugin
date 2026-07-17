@@ -100,9 +100,11 @@ dispatch and before final fold-in. If it changed, never reconcile or fold stale
 voices into the current project: disclose the change and either restart all
 voices on the new identity or return an incomplete panel result.
 
-Keep payloads, raw output, logs, and result artifacts in private scratch outside
-the repository under `/tmp/compound-engineering/ce-pov/<run-id>/`. Use mode
-`0600` for payload files.
+The caller passes this panel the resolved absolute `$SCRATCH_DIR` created in
+SKILL.md Phase 1. Keep payloads, raw output, logs, and result artifacts there;
+do not reconstruct the scratch root in this reference. Create each payload under
+`umask 077`, then `chmod 600 "$PAYLOAD_PATH"` before dispatch; do not rely on
+the ambient umask or a mode flag alone.
 
 ## 3. Resolve and announce one fixed route
 
