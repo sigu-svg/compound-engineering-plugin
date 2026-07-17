@@ -63,6 +63,10 @@ Every plan should contain:
 
 A plan is ready when an implementer can start confidently without needing the plan to write the code for them.
 
+## Task Visibility
+
+After intake determines that `ce-plan` will perform a material multi-stage run, use the platform's task-tracking capability when available to show a short user-facing view derived from the selected route and remaining planning work. Track meaningful outcomes, not every phase, tool call, or microstep; add conditional work only when its gate fires, and update the view at meaningful transitions. Use short, outcome-led names. If no task-tracking capability is available, continue normally without simulating a task list in chat.
+
 ## Workflow
 
 ### Phase 0: Resume, Source, and Scope

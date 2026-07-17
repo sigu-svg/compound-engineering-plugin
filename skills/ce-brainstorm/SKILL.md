@@ -146,18 +146,17 @@ Product-tier triggers additional Phase 1.2 questions and additional Product Cont
 
 #### 0.4 Surface the Workflow Spine
 
-For **Standard and Deep** scope, create a task list with the platform's task tracking tool (`TaskCreate`/`TaskUpdate`/`TaskList` in Claude Code, `update_plan` in Codex, or the equivalent on other harnesses). Skip it entirely for Lightweight and on the Phase 0.1b non-software route. Create it here, not earlier — 0.1b and 0.1c exit before this point, and the tier is unknown until 0.3.
+For **Standard and Deep** scope, use the platform's task-tracking capability when available (`TaskCreate`/`TaskUpdate`/`TaskList` in Claude Code, `update_plan` in Codex, or the equivalent on other harnesses). Skip it entirely for Lightweight and on the Phase 0.1b non-software route. Create it here, not earlier — 0.1b and 0.1c exit before this point, and the tier is unknown until 0.3.
 
-If the harness exposes no task primitive — including `ToolSearch` or its equivalent returning no match — name the six tasks once in chat and continue without per-task updates, rather than dropping the spine silently. Do not restate the list to simulate progress you cannot track.
+If the harness exposes no task-tracking capability — including `ToolSearch` or its equivalent returning no match — continue normally without simulating a task list in chat.
 
-The spine is six tasks, in order:
+The spine is five tasks, in order:
 
 1. Check what already exists
 2. Ask scoping questions
 3. Weigh approaches and recommend
 4. Confirm scope before writing
 5. Write the requirements plan
-6. Offer next steps
 
 **Conditional work earns a task only when its gate fires** — never at creation, and never as a placeholder for a branch that may not run. A branch earns one when the user is either waiting on it or would be surprised to learn it happened: an accepted blindspot pass, a dispatched Slack researcher, a Phase 2.6 verifier working in the background. A step that fires per-decision rather than once does not — it would thrash the list. Insert it at the position where it runs.
 
