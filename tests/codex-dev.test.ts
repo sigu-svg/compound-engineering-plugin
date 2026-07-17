@@ -8,6 +8,7 @@ import {
   inspectCodexDevStatus,
   inspectLocalCollection,
   replaceManagedCollectionLink,
+  removeManagedCollectionLink,
   removeCodexDevInstallation,
   removeLocalCollection,
   resolveCodexDevContext,
@@ -299,6 +300,23 @@ describe("Codex local skill collection", () => {
     ).rejects.toThrow("changed since it was inspected")
     expect(await fs.readlink(collectionPath)).toBe(racedTarget)
     expect(await fs.realpath(collectionPath)).toBe(await fs.realpath(racedTarget))
+  })
+
+  test("preserves a user-owned file created after a removable link was inspected", async () => {
+    const root = await makeTempRoot("codex-dev-remove-race-")
+    const collectionPath = path.join(root, "skills", "compound-engineering-local")
+    const originalTarget = path.join(root, "checkout", "skills")
+    await fs.mkdir(path.dirname(collectionPath), { recursive: true })
+    await fs.mkdir(originalTarget, { recursive: true })
+    await fs.symlink(originalTarget, collectionPath, "dir")
+    const inspectedTarget = await fs.readlink(collectionPath)
+    await fs.unlink(collectionPath)
+    await fs.writeFile(collectionPath, "raced-in user content\n")
+
+    await expect(
+      removeManagedCollectionLink(collectionPath, inspectedTarget),
+    ).rejects.toThrow("changed since it was inspected")
+    expect(await fs.readFile(collectionPath, "utf8")).toBe("raced-in user content\n")
   })
 })
 

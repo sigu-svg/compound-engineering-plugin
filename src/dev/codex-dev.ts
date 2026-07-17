@@ -279,6 +279,38 @@ export type ManagedCollectionLinkExpectation =
   | { kind: "absent" }
   | { kind: "valid"; target: string }
 
+export async function removeManagedCollectionLink(
+  collectionPath: string,
+  expectedTarget: string,
+  options: { ignoreChanges?: boolean } = {},
+): Promise<boolean> {
+  const changed = (): false => {
+    if (options.ignoreChanges) return false
+    throw new Error(`${collectionPath} changed since it was inspected; refusing to remove it`)
+  }
+
+  let stat
+  try {
+    stat = await fs.lstat(collectionPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return changed()
+    throw error
+  }
+  if (!stat.isSymbolicLink()) return changed()
+
+  let actualTarget
+  try {
+    actualTarget = await fs.readlink(collectionPath)
+  } catch (error) {
+    if (["EINVAL", "ENOENT"].includes((error as NodeJS.ErrnoException).code ?? "")) return changed()
+    throw error
+  }
+  if (actualTarget !== expectedTarget) return changed()
+
+  await fs.unlink(collectionPath)
+  return true
+}
+
 export async function replaceManagedCollectionLink(
   collectionPath: string,
   target: string,
@@ -289,20 +321,7 @@ export async function replaceManagedCollectionLink(
     return
   }
 
-  let stat
-  try {
-    stat = await fs.lstat(collectionPath)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error(`${collectionPath} changed since it was inspected; refusing to replace it`)
-    }
-    throw error
-  }
-  if (!stat.isSymbolicLink() || (await fs.readlink(collectionPath)) !== expected.target) {
-    throw new Error(`${collectionPath} changed since it was inspected; refusing to replace it`)
-  }
-
-  await fs.unlink(collectionPath)
+  await removeManagedCollectionLink(collectionPath, expected.target)
   try {
     await fs.symlink(target, collectionPath, "dir")
   } catch (error) {
@@ -317,14 +336,7 @@ async function restoreLocalCollection(
   activatedTarget: string,
 ): Promise<void> {
   if (previous.kind === "absent") {
-    try {
-      const stat = await fs.lstat(context.collectionPath)
-      if (stat.isSymbolicLink() && (await fs.readlink(context.collectionPath)) === activatedTarget) {
-        await fs.unlink(context.collectionPath)
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
-    }
+    await removeManagedCollectionLink(context.collectionPath, activatedTarget, { ignoreChanges: true })
     return
   }
   await replaceManagedCollectionLink(context.collectionPath, previous.target, {
@@ -345,7 +357,7 @@ export async function removeLocalCollection(context: CodexDevContext): Promise<b
   if (state.kind === "broken") {
     throw new Error(`${context.collectionPath} is a broken symlink; refusing to remove it automatically`)
   }
-  await fs.unlink(context.collectionPath)
+  await removeManagedCollectionLink(context.collectionPath, state.target)
   return true
 }
 
