@@ -654,7 +654,7 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     // simulate resuming days later against persisted state: backdate started_at
     const statePath = path.join(sd, "state.json")
     const st = JSON.parse(readFileSync(statePath, "utf8"))
-    st.started_at = "2020-01-01T00:00:00+00:00"
+    st.started_at = "2020-01-01T00:00:00Z"
     writeFileSync(statePath, JSON.stringify(st))
     // without reset -> session_seconds is huge (measured from 2020)
     expect(snapshot(sd, fetchFile(dir, "se2.json", FAILING)).session_seconds).toBeGreaterThan(1_000_000)
