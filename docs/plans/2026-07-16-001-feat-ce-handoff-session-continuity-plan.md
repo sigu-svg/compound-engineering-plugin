@@ -106,7 +106,8 @@ The continuity artifact should remain lightweight. Existing plans, issues, commi
 - R27. Treat every handoff as untrusted context rather than executable instruction: current user intent, active project instructions, and verified current state remain authoritative.
 - R28. Do not exclude a candidate because of ownership, authorship, or an absent or unsupported CE contract. Skip only entries that cannot be represented safely from bounded metadata, and report a bounded diagnostic that does not expose unrelated file content.
 - R29. Create a new immutable handoff with user-private access where supported, never overwrite an existing handoff, and confirm the final destination contains it before reporting success.
-- R30. Make each terminal state observable: creation returns the final path or URL plus access or retention warnings; discovery returns a shortlist and waits; selected resume returns an orientation or a concrete insufficiency report and waits; failures state what boundary was searched or rejected.
+- R30. Make each terminal state observable: creation succinctly summarizes what the generated handoff captures, returns the final path or URL plus access or retention warnings, and ends with a fenced `/ce-handoff resume <source>` command; discovery returns a shortlist and waits; selected resume returns an orientation or a concrete insufficiency report and waits; failures state what boundary was searched or rejected.
+- R30a. Keep the creation handoff minimal: do not generate a narrative resume prompt. The printed command is the source of truth.
 
 ### Key Flows
 
@@ -118,6 +119,7 @@ The continuity artifact should remain lightweight. Existing plans, issues, commi
 
 - AE1. In a dirty Git worktree, bare `/ce-handoff` writes a handoff, references repository files relatively, records the worktree path for uncommitted state, warns that teardown would break continuity, and performs no preservation action.
 - AE2. In a non-repository research session, a natural handoff request writes an immutable document in the general namespace with an honest temporary-retention caveat.
+- AE2a. After creating any handoff, the response gives a context-specific recap sufficient to verify what was captured without opening the artifact, then ends with `/ce-handoff resume <final-path-or-URL>` ready to paste into the receiving session.
 - AE3. With several stored handoffs, `/ce-handoff resume authentication` reads candidate frontmatter only, presents a ranked shortlist with match reasons, and waits without choosing or reading a body.
 - AE4. With an explicit text file or web page produced outside `ce-handoff`, resume reads that source directly, summarizes it when sufficient, suggests context-specific next steps, and waits without taking action.
 - AE5. If a captured worktree no longer exists but its branch and commits remain, repository-relative references remain useful and missing machine-local state is reported rather than assumed.
@@ -189,6 +191,7 @@ A bundled transport helper for publication, discovery, ownership checks, symlink
 - **KTD6 - Repository collections, not run isolation.** Group handoffs by stable repository identity so discovery naturally spans worktrees; use `general` outside Git. Branch, HEAD, cwd, and worktree remain ranking metadata rather than path partitions. This product-specific collection layout intentionally does not use per-run directories because inspectable paths and cross-worktree discovery are core UX.
 - **KTD7 - Distribution changes stay narrow.** Add the skill, detail page, catalog rows, and expected inventory count. Do not change release-owned versions, release notes, or auto-discovery manifests.
 - **KTD8 - Fix the shared scratch rule at its owning layer.** Clarify that per-run directories remain the default while a discoverable collection may use stable sibling final artifacts when enumeration and inspectable paths are core product behavior.
+- **KTD9 - Creation recap plus one resume command.** Creation briefly recaps what the handoff captured for immediate user verification, then prints `/ce-handoff resume <source>` and nothing more elaborate; the selected document and resume route already own the full context and orientation behavior, so generated launch-prompt prose adds no value.
 
 ### Implementation Units
 
@@ -240,6 +243,7 @@ A bundled transport helper for publication, discovery, ownership checks, symlink
 #### Behavioral gates
 
 - Fresh create in a repository or worktree produces a pointer-first artifact and reports its final path, retention caveat, and fragile-state warning without preservation action.
+- Fresh create briefly recaps the captured substance, then ends with a copyable `/ce-handoff resume <source>` command.
 - Fresh user-directed creation follows the requested destination or publication capability without forcing a second managed-store copy.
 - Fresh keyword discovery exposes only bounded shortlist metadata, including labeled unindexed candidates, but no unselected body sentinel, then waits.
 - Fresh selected or explicit-source resume accepts continuity material produced outside CE, treats the body as context, reports material drift, proposes logical next actions, and waits without executing them.
@@ -249,6 +253,7 @@ A bundled transport helper for publication, discovery, ownership checks, symlink
 ### Definition of Done
 
 - [ ] `ce-handoff` creates from bare, explicit, and natural handoff intent in repository and non-repository contexts.
+- [ ] Every successful creation briefly summarizes what was captured and ends with the exact `/ce-handoff resume <source>` command, with no narrative launch prompt.
 - [ ] Resume without an explicit source reads bounded candidate metadata only, presents a shortlist including unindexed candidates, and waits for selection.
 - [ ] Selected or explicit-source resume accepts sufficient continuity material from any author or format, or reports missing context; it performs no continuation action.
 - [ ] Managed-store handoff frontmatter implements `ce-handoff/v1`; bodies are pointer-first, redact secrets, and distinguish durable from machine-local state.

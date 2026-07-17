@@ -102,6 +102,11 @@ describe("ce-handoff portable runtime contract", () => {
   test("creation reports a written artifact rather than claiming a draft is complete", () => {
     expect(skill).toMatch(/final path.*retention.*warnings/i)
     expect(skill).toMatch(/confirming the destination contains the handoff/i)
+    expect(skill).toMatch(/succinct, context-specific summary.*generated handoff captures.*without opening it/i)
+    expect(skill).toMatch(/do not impose a fixed summary template/i)
+    expect(skill).toMatch(/End the creation response.*fenced, copyable command/i)
+    expect(skill).toContain("/ce-handoff resume <source>")
+    expect(skill).toMatch(/Do not generate a longer resume prompt/i)
   })
 
   test("contains no lifecycle fields, platform-specific inputs, or named instruction-file reads", () => {

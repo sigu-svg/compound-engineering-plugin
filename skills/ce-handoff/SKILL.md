@@ -21,7 +21,7 @@ Creation and resume are deliberately open at their edges. The managed store and 
 
 ### Outcome
 
-Create one immutable handoff at the destination the user requested, or use the managed temporary store by default. Report its final path or URL, retention or access limits, and continuity warnings. The handoff supplements authoritative artifacts; it does not replace them.
+Create one immutable handoff at the destination the user requested, or use the managed temporary store by default. Briefly summarize what the handoff captured, then report its final path or URL, retention or access limits, and continuity warnings. The handoff supplements authoritative artifacts; it does not replace them.
 
 ### Build the handoff
 
@@ -37,7 +37,15 @@ When the user did not choose another destination, write a Markdown snapshot at `
 
 Use a readable topic slug as the filename. When Git context exists, use a sanitized repository name plus a stable root-commit prefix as the repository namespace; otherwise use `general`. Worktrees from the same repository share the namespace and remain distinguishable through frontmatter. Do not put a timestamp or unique ID in the path by default; `created_at` carries chronology for discovery. On a filename collision, add the smallest available numeric suffix rather than overwrite a handoff. Keep the directory and file user-private where the platform supports permissions.
 
-Treat creation as complete only after confirming the destination contains the handoff. Then report the final path or URL, applicable retention or access limits, and any warnings together. Managed `/tmp` storage is OS-managed and not permanent. Its automatic discovery assumes the receiving session can see the same host filesystem; otherwise tell the user to transfer or publish the handoff to a receiver-visible location and resume from that explicit source.
+Treat creation as complete only after confirming the destination contains the handoff. Give a succinct, context-specific summary of what the generated handoff captures so the user can verify its substance without opening it; do not impose a fixed summary template. Then report the final path or URL, applicable retention or access limits, and any warnings together. Managed `/tmp` storage is OS-managed and not permanent. Its automatic discovery assumes the receiving session can see the same host filesystem; otherwise tell the user to transfer or publish the handoff to a receiver-visible location and resume from that explicit source.
+
+End the creation response with one fenced, copyable command using the final path or URL:
+
+```text
+/ce-handoff resume <source>
+```
+
+Quote the source when needed so the command can be pasted verbatim. Do not generate a longer resume prompt.
 
 ### Frontmatter contract
 
