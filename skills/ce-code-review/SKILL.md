@@ -421,7 +421,7 @@ Distinguish an empty successful search from a failed or unavailable search:
 
 - Stage 1b returned `lite_eligible: true` (1-39 executable changed lines, zero uncounted files, and no path signals), AND
 - No content-based risk read from the diff in Stage 3 (auth, payments, data mutation, external API, secrets/permissions, deserialization, crypto, concurrency/background jobs, filesystem/process execution), AND
-- No conditional persona was selected in Stage 3.
+- No conditional persona other than `project-standards` was selected in Stage 3.
 
 `exec_lines: null`, `uncounted_files > 0`, a non-empty `signals` array, or helper failure are hard disqualifiers. A pure code diff that also touches one `.md` runs the full roster; that conservatism is the point.
 
