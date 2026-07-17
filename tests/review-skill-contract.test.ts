@@ -519,6 +519,9 @@ describe("ce-code-review contract", () => {
     const content = await readRepoFile("skills/ce-code-review/SKILL.md")
 
     expect(content).toMatch(
+      /Stage 3b standards discovery completed successfully \(with applicable paths or a confirmed empty result\)/i,
+    )
+    expect(content).toMatch(
       /No conditional persona other than `project-standards` was selected in Stage 3/i,
     )
     expect(content).toMatch(
