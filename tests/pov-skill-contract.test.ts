@@ -83,6 +83,8 @@ describe("ce-pov cross-model panel contract", () => {
 
     expect(phaseThree).toContain("may qualify for a proactive offer")
     expect(phaseThree).toContain("before resolving participation or deciding whether to offer")
+    expect(phaseThree).toContain("explicitly named peers proceed after notice without a second question")
+    expect(phaseThree).toMatch(/auto-selected peers, and any route that adds or changes a recipient or intermediary, require user approval/)
     expect(phaseThree).toMatch(/peers stay read-only/i)
   })
 
