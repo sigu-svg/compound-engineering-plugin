@@ -82,7 +82,8 @@ describe("ce-handoff portable runtime contract", () => {
   test("discovery is metadata-only and stops for user selection", () => {
     expect(skill).toMatch(/Before reading any candidate metadata or frontmatter.*resolve the discovery boundary.*exclude symlink candidates.*resolved path escapes that boundary/i)
     expect(skill).toMatch(/discovery-only containment rule does not restrict an explicit selected source/i)
-    expect(skill).toMatch(/Read only bounded frontmatter.*closing delimiter/i)
+    expect(skill).toMatch(/Read only bounded frontmatter.*at most the first 64 lines or 16 KiB.*whichever comes first.*closing frontmatter delimiter/i)
+    expect(skill).toMatch(/no closing delimiter.*within those bounds.*unindexed.*do not read farther/i)
     expect(skill).toMatch(/rank only.*(?:metadata|frontmatter)/i)
     expect(skill).toMatch(/Never read an unselected body.*rank/i)
     expect(skill).toMatch(/`ce-handoff\/v1` metadata.*enriched index.*not an eligibility gate/i)
