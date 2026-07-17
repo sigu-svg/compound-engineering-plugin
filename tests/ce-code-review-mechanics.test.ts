@@ -73,6 +73,35 @@ describe("ce-code-review deterministic mechanics", () => {
     expect(scope.lite_eligible).toBe(false)
   })
 
+  test("scope helper excludes base-only changes after the base advances", () => {
+    const { dir, base } = fixtureRepo()
+    git(dir, "checkout", "-qb", "review-head")
+    writeFileSync(path.join(dir, "worker.ts"), "export const worker = true\n")
+    git(dir, "add", ".")
+    git(dir, "commit", "-qm", "head change")
+    const head = git(dir, "rev-parse", "HEAD")
+
+    git(dir, "checkout", "-q", base)
+    mkdirSync(path.join(dir, "api"))
+    writeFileSync(path.join(dir, "api", "routes.test.ts"), "export const route = true\n")
+    git(dir, "add", ".")
+    git(dir, "commit", "-qm", "advance base")
+    const advancedBase = git(dir, "rev-parse", "HEAD")
+
+    const result = run(
+      "python3",
+      [SCOPE_SCRIPT, "--base", advancedBase, "--head", head],
+      dir,
+    )
+    expect(result.status).toBe(0)
+    const scope = JSON.parse(result.stdout)
+
+    expect(scope.changed_files).toEqual(["worker.ts"])
+    expect(scope.signals).toEqual([])
+    expect(scope.test_files_changed).toBe(false)
+    expect(scope.exec_lines).toBe(1)
+  })
+
   test("findings helper validates, exact-deduplicates, gates, sorts, and numbers", () => {
     const returns = [
       {

@@ -55,6 +55,14 @@ def valid_commit(ref: str | None) -> bool:
     return git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode == 0
 
 
+def unique_merge_base(base: str, head: str) -> str | None:
+    result = git("merge-base", "--all", base, head)
+    candidates = [line for line in result.stdout.splitlines() if line]
+    if result.returncode != 0 or len(candidates) != 1:
+        return None
+    return candidates[0]
+
+
 def fail_closed(reason: str) -> dict[str, object]:
     return {
         "status": "unknown",
@@ -85,7 +93,11 @@ def main() -> int:
 
     diff_args = [args.base]
     if args.head:
-        diff_args.append(args.head)
+        merge_base = unique_merge_base(args.base, args.head)
+        if merge_base is None:
+            print(json.dumps(fail_closed("merge base unavailable or ambiguous"), sort_keys=True))
+            return 0
+        diff_args = [merge_base, args.head]
 
     names = git("diff", "--name-only", *diff_args)
     numstat = git("diff", "--numstat", *diff_args)

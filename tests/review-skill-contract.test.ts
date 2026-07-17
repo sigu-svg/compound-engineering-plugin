@@ -377,8 +377,9 @@ describe("ce-code-review contract", () => {
     expect(content).toMatch(/Bounded foreground dispatch/)
     expect(content).toMatch(/active-agent\/thread\/concurrency-limit spawn errors as backpressure/)
     expect(content).toMatch(/background execution off/)
+    expect(content).not.toMatch(/parallel dispatch|bounded parallel scheduler/i)
     // Exceptions are restated at point of action so the agent does not have to recall them
-    // from the Model tiering subsection above during a 12-agent parallel dispatch.
+    // from the Model tiering subsection above while advancing the foreground queue.
     expect(content).toContain("correctness-reviewer")
     expect(content).toContain("security-reviewer")
     expect(content).toContain("adversarial-reviewer")
@@ -426,13 +427,16 @@ describe("ce-code-review contract", () => {
 
     // Remaining findings use one bounded foreground batch.
     expect(content).toMatch(/deterministic validator batch/i)
-    expect(content).toMatch(/up to eight findings/i)
-    expect(content).toMatch(/keep them all rather than silently omitting a blocker/i)
+    expect(content).toMatch(/Eight findings is the normal cap/i)
+    expect(content).toMatch(/expand that same batch.*include every surviving P0\/P1/i)
+    expect(content).toMatch(/never split the work into another batch/i)
     expect(content).toMatch(/Run the validator batch foreground/i)
     expect(content).toMatch(/Cost, elapsed time, confidence.*never licenses an additional skip/i)
 
     // Validator template exists and is read-only
     expect(validatorTemplate).toMatch(/validator is independent|independent validation gate/i)
+    expect(validatorTemplate).toMatch(/Eight findings is the normal cap/i)
+    expect(validatorTemplate).toMatch(/expand that same batch.*every surviving P0\/P1/i)
     expect(validatorTemplate).toMatch(/read-only tools|Do not edit, commit, push, or mutate files/i)
     expect(validatorTemplate).toContain('"validated": true | false')
     expect(validatorTemplate).toMatch(/predates and is unaffected by this diff/i)
