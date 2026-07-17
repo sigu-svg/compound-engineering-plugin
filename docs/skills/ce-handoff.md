@@ -79,7 +79,7 @@ These resume from an explicit source or discover likely candidates. A selected s
 
 ## Safe Discovery
 
-When no source or search boundary is supplied, the skill searches the managed handoff directory. For each candidate, it reads at most the first 64 lines or 16 KiB, whichever comes first, stopping sooner at the closing frontmatter delimiter. If no closing delimiter appears within those bounds, the candidate is treated as unindexed and discovery reads no farther. `ce-handoff/v1` provides a richer index, but it is not an eligibility gate. The skill ranks candidates using the metadata available, including title, summary, keywords, repository or working-directory affinity, and recency.
+When no source or search boundary is supplied, the skill searches the managed handoff directory. It does not inspect the body of a candidate without frontmatter: after checking only its first line, it treats the candidate as unindexed and uses filesystem metadata instead. For a candidate beginning with the exact frontmatter opener `---`, it reads at most the first 64 lines or 16 KiB, whichever comes first, stopping sooner at the closing delimiter. If no closing delimiter appears within those bounds, the candidate is treated as unindexed and discovery reads no farther. `ce-handoff/v1` provides a richer index, but it is not an eligibility gate. The skill ranks candidates using the metadata available, including title, summary, keywords, repository or working-directory affinity, and recency.
 
 When the user supplies another folder or collection, the skill searches there instead. It uses compatible frontmatter when present and otherwise lists unindexed candidates from filenames, locations, and filesystem metadata. It does not read candidate bodies merely to rank them.
 
