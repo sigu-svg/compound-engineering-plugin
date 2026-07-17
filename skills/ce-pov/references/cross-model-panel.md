@@ -236,14 +236,14 @@ After fold-in, stop on the first matching enum:
 - **`confident`** — ce-pov has a reasoned POV after weighing every survivor;
 - **`no-movement`** — every surviving peer returned `held` and ce-pov is still
   not confident; or
-- **`cap-2`** — two reconcile exchanges completed after initial dissent and
-  ce-pov is still not confident.
+- **`limit-reached`** — the effective user-authorized finite limit completed
+  after initial dissent and ce-pov is still not confident.
 
 Convergence is ce-pov's reasoned confidence, not a vote. A three-way split still
 ends in a confident decision or the stalemate disclosure. Route `confident` to
-the **Confident** disclosure below. Route `no-movement` and `cap-2` to the
-**Stalemate** disclosure; those stops mean bounded reconciliation ended without
-confident convergence, never that ce-pov should infer a settled result.
+the **Confident** disclosure below. Route `no-movement` and `limit-reached` to
+the **Stalemate** disclosure; those stops mean bounded reconciliation ended
+without confident convergence, never that ce-pov should infer a settled result.
 
 The cap stops automatic dispatch; it is a checkpoint, not proof that another
 round would be useless. At the checkpoint, decide whether a bounded extension is

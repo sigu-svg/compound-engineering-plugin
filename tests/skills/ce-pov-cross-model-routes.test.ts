@@ -301,6 +301,21 @@ describe("ce-pov output gate and receipts", () => {
     expect(result.stderr).toContain("terminal_reason=api_error")
   })
 
+  test("ancillary structured fields do not hide an unrecognized human-readable diagnostic", () => {
+    const envelope = JSON.stringify({
+      type: "result",
+      diagnostic: "Provider rejected the request for this account",
+      terminal_reason: "api_error",
+    })
+    const { env } = sandbox(["claude"], `#!/bin/sh\ncat >/dev/null\nprintf '%s' '${envelope}'\nexit 1\n`)
+    const dir = runDir()
+    const result = run(["codex", "claude", payload(), dir], dir, env)
+
+    expect(result.files).not.toContain("pov-claude.json")
+    expect(result.stderr).toContain("Provider rejected the request for this account")
+    expect(result.stderr).toContain("terminal_reason=api_error")
+  })
+
   test("schema-valid output from a timed-out peer is discarded and scratch is cleaned", () => {
     const response = '{"structured_output":{"voice":"peer","position":"Hold","reasoning":"Late evidence","evidence":[],"external_check":"unavailable","mode":"independent","movement":"initial"}}'
     const { env } = sandbox(["cursor-agent"], `#!/bin/sh\ncat >/dev/null\nprintf '%s' '${response}'\nsleep 5\n`)

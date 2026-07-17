@@ -480,6 +480,27 @@ describe("cross-model-doc-review skip paths (R11, R16) — non-blocking, no file
     expect(r.stderr).toContain("Not logged in")
     expect(r.stderr).toContain("terminal_reason=api_error")
   })
+
+  test("ancillary structured fields do not hide an unrecognized human-readable diagnostic", () => {
+    const payload = JSON.stringify({
+      diagnostic: "Provider rejected the request for this account",
+      terminal_reason: "api_error",
+    })
+    const { env } = sandbox(
+      ["claude"],
+      `#!/bin/sh\ncat >/dev/null\nprintf '%s' '${payload}'\nexit 1\n`,
+    )
+    const doc = makeDoc()
+    const runDir = makeRunDir()
+    const r = run(
+      ["codex", "claude", "adversarial", doc, "plan", "none", runDir],
+      runDir,
+      env,
+    )
+
+    expect(r.stderr).toContain("Provider rejected the request for this account")
+    expect(r.stderr).toContain("terminal_reason=api_error")
+  })
 })
 
 describe("cross-model-doc-review normalization (R18, KTD5)", () => {

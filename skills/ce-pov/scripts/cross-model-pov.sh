@@ -25,9 +25,9 @@
 #                   grok-cli, grok-cursor, cursor, or composer. A route failure
 #                   returns no artifact; only the host may disclose and retry a
 #                   different recipient.
-#   <subject-payload> prepared framed question + verified project floor + subject
-#                     material. It must exclude credentials and raw secret-bearing
-#                     file contents because it is embedded into the peer prompt.
+#   <subject-payload> framed question plus any conversation-only subject material.
+#                     Point to repository files instead of copying their contents;
+#                     the peer grounds itself from the shared working tree.
 #   <run-dir>         existing private dir outside the repository; output ->
 #                     <run-dir>/pov-<provider>.json
 #
@@ -371,9 +371,9 @@ route_available "$FIXED_ROUTE" || skip "fixed route '$FIXED_ROUTE' is unavailabl
 log "fixed cross-model POV route: target=$TARGET route=$FIXED_ROUTE (host $HOST_PROVIDER excluded)"
 
 # --- compose the peer prompt from the canonical persona (single source) ----
-# The payload is prepared by ce-pov and embeds only the framed subject, verified
-# project-floor summary, and subject material needed for this round. It must not
-# contain credentials or raw secret-bearing file contents.
+# The payload is prepared by ce-pov and embeds the framed question plus any
+# conversation-only subject material needed for this round. Repository evidence
+# stays in the shared working tree for the peer to inspect directly.
 SCRATCH_PARENT="${CROSS_MODEL_SCRATCH_PARENT:-/tmp}"
 [ -d "$SCRATCH_PARENT" ] || mkdir -p "$SCRATCH_PARENT" 2>/dev/null || skip "private scratch parent '$SCRATCH_PARENT' unavailable"
 SCRATCH_PARENT="$(cd "$SCRATCH_PARENT" && pwd -P)" || skip "cannot resolve private scratch parent"
@@ -579,17 +579,25 @@ parse_structured() {   # <logfile> <outfile>
 }
 
 bounded_failure_evidence() {   # <logfile>; prefer structured diagnostics, then bounded head+tail
-  local path="$1" evidence
-  evidence="$(jq -r '
+  local path="$1" human ancillary evidence
+  human="$(jq -r '
     [
       (.result? | select(type == "string" and length > 0)),
       (.message? | select(type == "string" and length > 0)),
-      (.error?.message? | select(type == "string" and length > 0)),
+      (.error?.message? | select(type == "string" and length > 0))
+    ] | unique | join(" | ")
+  ' "$path" 2>/dev/null)"
+  ancillary="$(jq -r '
+    [
       (if .api_error_status? != null then "api_error_status=\(.api_error_status)" else empty end),
       (.terminal_reason? | select(type == "string" and length > 0) | "terminal_reason=" + .)
     ] | unique | join(" | ")
   ' "$path" 2>/dev/null)"
-  [ -n "$evidence" ] || evidence="$(cat "$path")"
+  # Ancillary fields describe the exit but are not the diagnostic itself. If
+  # no recognized human-readable field exists, retain bounded raw output so a
+  # CLI's newer or provider-specific error field is still visible.
+  [ -n "$human" ] && evidence="$human" || evidence="$(cat "$path")"
+  [ -n "$ancillary" ] && evidence="${evidence:+$evidence | }$ancillary"
   evidence="${evidence//$'\n'/ }"
   if [ "${#evidence}" -gt 300 ]; then
     evidence="${evidence:0:147} ... ${evidence: -147}"

@@ -695,17 +695,25 @@ run_provider() {
 # Prefer structured CLI diagnostics over a raw tail, which can hide the useful
 # error near the beginning of a large JSON envelope.
 bounded_failure_evidence() {   # <logfile>
-  local path="$1" evidence
-  evidence="$(jq -r '
+  local path="$1" human ancillary evidence
+  human="$(jq -r '
     [
       (.result? | select(type == "string" and length > 0)),
       (.message? | select(type == "string" and length > 0)),
-      (.error?.message? | select(type == "string" and length > 0)),
+      (.error?.message? | select(type == "string" and length > 0))
+    ] | unique | join(" | ")
+  ' "$path" 2>/dev/null)"
+  ancillary="$(jq -r '
+    [
       (if .api_error_status? != null then "api_error_status=\(.api_error_status)" else empty end),
       (.terminal_reason? | select(type == "string" and length > 0) | "terminal_reason=" + .)
     ] | unique | join(" | ")
   ' "$path" 2>/dev/null)"
-  [ -n "$evidence" ] || evidence="$(cat "$path")"
+  # Ancillary fields describe the exit but are not the diagnostic itself. If
+  # no recognized human-readable field exists, retain bounded raw output so a
+  # CLI's newer or provider-specific error field is still visible.
+  [ -n "$human" ] && evidence="$human" || evidence="$(cat "$path")"
+  [ -n "$ancillary" ] && evidence="${evidence:+$evidence | }$ancillary"
   evidence="${evidence//$'\n'/ }"
   if [ "${#evidence}" -gt 300 ]; then
     evidence="${evidence:0:147} ... ${evidence: -147}"

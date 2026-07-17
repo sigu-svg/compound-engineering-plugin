@@ -158,11 +158,13 @@ describe("ce-pov cross-model panel contract", () => {
     expect(panel).toMatch(/consult other models.*independent peer opinions.*reconcile their disagreement/s)
     expect(panel).toMatch(/Named peers:\*\* exact and uncapped/)
     expect(panel).toContain("up to two reachable")
-    for (const stop of ["**`confident`**", "**`no-movement`**", "**`cap-2`**"]) {
+    for (const stop of ["**`confident`**", "**`no-movement`**", "**`limit-reached`**"]) {
       expect(panel).toContain(stop)
     }
     expect(panel).toMatch(/Route `confident` to\s+the \*\*Confident\*\* disclosure/)
-    expect(panel).toMatch(/Route `no-movement` and `cap-2` to the\s+\*\*Stalemate\*\* disclosure/)
+    expect(panel).toMatch(/Route `no-movement` and `limit-reached` to\s+the \*\*Stalemate\*\* disclosure/)
+    expect(panel).toContain("effective user-authorized finite limit")
+    expect(panel).not.toContain("`cap-2`")
   })
 
   test("pins material dissent for every subject and bounded reconcile context", async () => {
@@ -202,6 +204,16 @@ describe("ce-pov cross-model panel contract", () => {
     expect(prose).toMatch(/For `skeptic` mode, include ce-pov's position/)
     expect(prose).toMatch(/Reconciliation payloads.*include already-formed positions/)
     expect(prose).toMatch(/Do not duplicate readable files/)
+  })
+
+  test("grounds initial peers in the subject and shared tree without a host-curated project floor", async () => {
+    const peer = await skillFile("references/agents/pov-peer.md")
+    const prose = compact(peer)
+
+    expect(prose).toMatch(/supplied subject.*shared working tree/)
+    expect(prose).toContain("Do not require or infer a host-curated project summary")
+    expect(prose).not.toContain("verified project floor")
+    expect(prose).not.toContain("shared project floor")
   })
 
   test("uses the default reconciliation cap as a user-extensible checkpoint", async () => {
