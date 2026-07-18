@@ -194,13 +194,17 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     expect(babysit).not.toMatch(/whenever the repo uses review bots/i)
   })
 
-  test("settle policy: ~600s exists only as the re-arm after a rejected merge-ready wake", async () => {
-    const babysit = await readRepoFile(BABYSIT)
-    // Every 600s mention must live inside the wake protocol's rejection branch.
-    const paragraphs = babysit.split("\n\n").filter((p) => p.includes("600"))
-    expect(paragraphs.length, "the generous settle must be documented exactly once").toBe(1)
-    expect(paragraphs[0]).toMatch(/reject the wake/i)
-    expect(paragraphs[0], "600s must be framed as the post-rejection re-arm").toMatch(/re-arm/i)
+  test("settle policy: an incomplete review lifecycle gets a 15-minute floor and 30-minute ceiling", async () => {
+    const [babysit, script] = await Promise.all([readRepoFile(BABYSIT), readRepoFile(PR_SNAPSHOT)])
+    expect(babysit).toContain("incomplete review lifecycle")
+    expect(babysit).toContain("15 minutes")
+    expect(babysit).toContain("30 minutes")
+    expect(babysit).toMatch(/trajectory.*extend/i)
+    expect(babysit).toMatch(/never.*shorten/i)
+    expect(babysit).toMatch(/must not re-arm.*same unchanged signal/i)
+    expect(babysit).toMatch(/unattributed lifecycle incomplete/i)
+    expect(babysit).toMatch(/reviewer when identifiable.*observed signal/i)
+    expect(script).toContain("review_signal_seen_on_head")
     // A done signal on the current head must end the wait, not start another settle period.
     expect(babysit).toContain("never extends the wait")
     expect(babysit).toContain("no further settle period")

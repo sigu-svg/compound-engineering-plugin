@@ -57,8 +57,8 @@ RELATIONSHIP_DEPENDENT = "dependent"
 RELATIONSHIP_INDEPENDENT = "independent"
 RELATIONSHIP_PROBE_ERROR = "probe-error"
 
-# A present in-progress review signal (👀) blocks a merge-ready read — but never terminally: after
-# this much quiet a stale/never-cleared signal is ignored so the PR can still be called ready.
+# First judgment point for an incomplete review lifecycle. The agent may extend once to 1800s when
+# concrete prior-round timing supports it; the skill contract owns that semantic decision.
 REVIEW_INPROGRESS_MAX_WAIT = 900
 
 # Trajectory check-history states (persisted, compared by ==).
@@ -546,6 +546,8 @@ def _empty_state(pr, repo, url, now):
         "started_at": created_at, "invocation_id": None, "invocation_budget_seconds": None,
         "checks": {}, "threads": {}, "ci_dispatched": {},
         "review_decision": None, "mergeable": None, "merge_state_status": None,
+        "review_in_progress": False, "review_signal_seen_on_head": False,
+        "review_signal_first_seen_at": None, "review_signal_last_changed_at": None,
         "pr_chain": _default_pr_chain(),
         "last_change_at": None, "last_action": None, "stop_reason": None,
         "watch_generation": None, "watch_pid": None, "watch_process_identity": None,
@@ -766,10 +768,24 @@ def diff(state, cur, now=None, advance_trajectory=True):
     prior_threads = state.get("threads", {})
     prior_feedback = state.get("feedback", {})
     prior_change_sig = _change_sig(state)
+    prior_review_in_progress = bool(state.get("review_in_progress", False))
+    review_in_progress = bool(cur.get("review_in_progress", False))
 
     if head_changed:
         # SHA-scoped state is meaningless on a new head.
         state["ci_dispatched"] = {}
+        state["review_signal_seen_on_head"] = review_in_progress
+        state["review_signal_first_seen_at"] = _iso(now) if review_in_progress else None
+        state["review_signal_last_changed_at"] = _iso(now) if review_in_progress else None
+    else:
+        # Preserve a signal seen on this head after it disappears; the agent owns completion judgment,
+        # while this structural fact distinguishes an incomplete lifecycle from "no signal ever."
+        if (prior_review_in_progress or review_in_progress) and not state.get("review_signal_seen_on_head", False):
+            state["review_signal_seen_on_head"] = True
+            legacy_seen_at = state.get("last_change_at") if prior_review_in_progress else None
+            state["review_signal_first_seen_at"] = legacy_seen_at or _iso(now)
+        if review_in_progress != prior_review_in_progress:
+            state["review_signal_last_changed_at"] = _iso(now)
 
     # --- CI: a failing check on the current head is actionable until the agent
     # marks it dispatched (recorded in ci_dispatched[head]) or the head moves.
@@ -835,7 +851,7 @@ def diff(state, cur, now=None, advance_trajectory=True):
     state["review_decision"] = cur["review_decision"]
     state["mergeable"] = cur["mergeable"]
     state["merge_state_status"] = cur["merge_state_status"]
-    state["review_in_progress"] = cur.get("review_in_progress", False)
+    state["review_in_progress"] = review_in_progress
     state["awaiting_approval"] = cur.get("awaiting_approval", 0)
     state["pr_chain"] = cur.get("pr_chain") or _default_pr_chain()
 
@@ -887,7 +903,10 @@ def diff(state, cur, now=None, advance_trajectory=True):
         "checks_terminal": checks_terminal,
         "checks_present": bool(cur["checks"]),
         "all_checks_ok": all_checks_ok,
-        "review_in_progress": cur.get("review_in_progress", False),
+        "review_in_progress": review_in_progress,
+        "review_signal_seen_on_head": bool(state.get("review_signal_seen_on_head", False)),
+        "review_signal_first_seen_at": state.get("review_signal_first_seen_at"),
+        "review_signal_last_changed_at": state.get("review_signal_last_changed_at"),
         "checks_awaiting_approval": awaiting_approval,
         "blocked_external": blocked_external,
         "pr_chain": state["pr_chain"],
@@ -1120,12 +1139,10 @@ def _wake_reason(a, settle_seconds):
         # a dispatched check left terminally red (counts.ci is 0 — nothing new to dispatch) is a
         # blocker to hand back, not a reason to idle to max-runtime.
         return "blocked-failing"
-    # merge-ready candidate: green + settled AND no review in flight. An 👀-style in-progress signal
-    # means a review is underway, so the PR is NOT ready no matter how long it has been quiet — time
-    # is one component of "settled", not the gate. Honor the signal only up to a generous bound so a
-    # stale reaction that never clears cannot block ready forever (absence never blocks; presence
-    # only delays). Only wake once quiet has actually elapsed, so a stable green PR is not roused
-    # every poll while it cools off.
+    # merge-ready candidate: green + settled with no fresh review movement. A live 👀 blocks the
+    # ordinary 300s settle, but wakes the agent after 900 quiet seconds for the semantic stale-review
+    # judgment. The agent may extend once to 1800s by re-arming with that settle value; the detector
+    # never decides whether the reviewer is genuinely slow or stuck.
     review_blocking = a.get("review_in_progress") and a.get("quiet_seconds", 0) < REVIEW_INPROGRESS_MAX_WAIT
     # Interactive merge-ready does NOT require `all_checks_ok`'s "at least one observed check": a repo
     # with no configured checks has a CLEAN/MERGEABLE PR that should be callable ready. (That guard
