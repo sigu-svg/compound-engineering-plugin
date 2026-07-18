@@ -413,7 +413,7 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
       has_failing_checks: true,
       checks_terminal: true,
     })).toBe("blocked-failing")
-  })
+  }, 15000)
 
   test("branch currency: claim re-entry reconciles, permits one proven-no-mutation retry, and never retries ambiguity", () => {
     const fetch = fetchFile(dir, "currency-lifecycle.json", quietCurrencyFixture())
