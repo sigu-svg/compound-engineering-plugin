@@ -316,6 +316,13 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     }
   })
 
+  test("blocked approval watching stays inside the invocation budget", async () => {
+    const babysit = await readRepoFile(BABYSIT)
+    expect(babysit).toContain("within this invocation's remaining fixed budget")
+    expect(babysit).toContain("never promise or mint a longer approval-watch window after invocation entry")
+    expect(babysit).not.toContain("hard-capped at 24h")
+  })
+
   test("pipeline success requires clean chain currency in both loaded contracts", async () => {
     const [babysit, watchLoop] = await Promise.all([
       readRepoFile(BABYSIT),

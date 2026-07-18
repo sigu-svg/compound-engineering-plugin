@@ -9,6 +9,8 @@ import path from "node:path"
 // spawnSync pattern. Locks in the ce-code-review fixes: crash-safety, needs-human
 // silencing + open_needs_human visibility, checks_terminal, key-collision, null-head.
 const SCRIPT = path.join(import.meta.dir, "..", "skills", "ce-babysit-pr", "scripts", "pr-snapshot")
+const ORDINARY_TEST_BUDGET_SECONDS = "28800"
+const EXPIRING_TEST_INVOCATION = ["--start-invocation", "--invocation-budget-seconds", "1"]
 
 function fetchFile(dir: string, name: string, obj: unknown): string {
   const p = path.join(dir, name)
@@ -34,7 +36,7 @@ function snapshot(stateDir: string, fetch: string, extra: string[] = []): any {
     || extra.includes("--start-invocation")
     || extra.includes("--reset-session")
   const budgetArgs = startsInvocation && !extra.includes("--invocation-budget-seconds")
-    ? ["--invocation-budget-seconds", "1"]
+    ? ["--invocation-budget-seconds", ORDINARY_TEST_BUDGET_SECONDS]
     : []
   const r = spawnSync(
     "python3",
@@ -50,7 +52,8 @@ function snapshot(stateDir: string, fetch: string, extra: string[] = []): any {
 function currentInvocationArgs(stateDir: string, fetch: string): string[] {
   const persistedArgs = persistedInvocationArgs(stateDir)
   if (persistedArgs.length > 0) return persistedArgs
-  const started = snapshot(stateDir, fetch, ["--start-invocation", "--invocation-budget-seconds", "1"])
+  const started = snapshot(stateDir, fetch, ["--start-invocation",
+    "--invocation-budget-seconds", ORDINARY_TEST_BUDGET_SECONDS])
   return ["--invocation-id", started.invocation_id, "--session-started-at", started.invocation_started_at,
     "--invocation-budget-seconds", String(started.invocation_budget_seconds)]
 }
@@ -673,7 +676,8 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     const sd = path.join(dir, "recurwatch")
     const RED = { key: "CI/x", name: "x", status: "COMPLETED", conclusion: "FAILURE", details_url: "u" }
     const GREEN = { key: "CI/x", name: "x", status: "COMPLETED", conclusion: "SUCCESS", details_url: "u" }
-    snapshot(sd, fetchFile(dir, "rw1.json", { ...FAILING, head_sha: "s1", threads: [], checks: [RED] })) // fail h1
+    snapshot(sd, fetchFile(dir, "rw1.json", { ...FAILING, head_sha: "s1", threads: [], checks: [RED] }),
+      EXPIRING_TEST_INVOCATION) // fail h1; the watch below deliberately expires
     watch(sd, fetchFile(dir, "rw2.json", { ...FAILING, head_sha: "s2", threads: [], checks: [GREEN] })) // a poll observes the CLEAR
     const d = snapshot(sd, fetchFile(dir, "rw3.json", { ...FAILING, head_sha: "s3", threads: [], checks: [RED] })) // fail h3
     expect(d.trajectory.check_recur_max).toBe(1) // fail -> clear(seen only on a poll) -> fail = recurrence
@@ -1089,7 +1093,9 @@ m.cmd_snapshot(args)
     // clean + green but not yet settled (settle 300 > quiet ~0) -> keep watching -> times out
     const clean = { ...FAILING, merge_state_status: "CLEAN", review_decision: "APPROVED", threads: [], checks: [GREEN] }
     const cf = fetchFile(dir, "wc.json", clean)
-    expect(watch(path.join(dir, "w3"), cf, ["--settle-seconds", "300"]).reason).toBe("max-runtime")
+    const unsettledDir = path.join(dir, "w3")
+    snapshot(unsettledDir, cf, EXPIRING_TEST_INVOCATION)
+    expect(watch(unsettledDir, cf, ["--settle-seconds", "300"]).reason).toBe("max-runtime")
     // same clean state with a zero settle window -> merge-ready wake
     expect(watch(path.join(dir, "w4"), cf, ["--settle-seconds", "0"]).reason).toBe("merge-ready")
   }, 15000) // spawns 4 watch subprocesses incl. a max-runtime timeout -> explicit timeout over Bun's 5s default
@@ -1700,7 +1706,9 @@ print(json.dumps({"ids": [t["thread_id"] for t in threads], "calls": calls}))
     const GREEN = { key: "CI/test", name: "test", status: "COMPLETED", conclusion: "SUCCESS", details_url: "u" }
     const base = { ...FAILING, merge_state_status: "CLEAN", review_decision: "APPROVED", threads: [], checks: [GREEN] }
     const inprog = fetchFile(dir, "rip1.json", { ...base, review_in_progress: true })
-    expect(watch(path.join(dir, "rip1"), inprog, ["--settle-seconds", "0"]).reason).toBe("max-runtime")
+    const inProgressDir = path.join(dir, "rip1")
+    snapshot(inProgressDir, inprog, EXPIRING_TEST_INVOCATION)
+    expect(watch(inProgressDir, inprog, ["--settle-seconds", "0"]).reason).toBe("max-runtime")
     const nosig = fetchFile(dir, "rip2.json", { ...base, review_in_progress: false })
     expect(watch(path.join(dir, "rip2"), nosig, ["--settle-seconds", "0"]).reason).toBe("merge-ready")
   }, 15000)
@@ -1721,7 +1729,7 @@ print(json.dumps({"ids": [t["thread_id"] for t in threads], "calls": calls}))
     const red = { ...FAILING, threads: [], checks: [{ key: "CI/test", name: "test", status: "COMPLETED", conclusion: "FAILURE", details_url: "u" }] }
     const rf = fetchFile(dir, "wbf.json", red)
     const sd = path.join(dir, "wbf")
-    snapshot(sd, rf) // the failing check is actionable on this first tick
+    snapshot(sd, rf, EXPIRING_TEST_INVOCATION) // this standing-residual watch deliberately expires
     mark(sd, ["--check", "CI/test"]) // now dispatched -> counts.ci == 0, terminal-red residual, already surfaced
     expect(watch(sd, rf).reason).toBe("max-runtime")
   }, 15000)
@@ -1736,7 +1744,7 @@ print(json.dumps({"ids": [t["thread_id"] for t in threads], "calls": calls}))
       head_sha: "s1", url: "http://x/1", checks: [],
       threads: [{ thread_id: "T1", last_comment_id: "C1", last_comment_at: "C1" }, ...extra],
     })
-    snapshot(sd, fetchFile(dir, "nhw1.json", base()))
+    snapshot(sd, fetchFile(dir, "nhw1.json", base()), EXPIRING_TEST_INVOCATION)
     mark(sd, ["--thread", "T1", "--disposition", "needs-human"])
     // parked needs-human, nothing else actionable -> keeps watching, times out (does NOT wake needs-human)
     expect(watch(sd, fetchFile(dir, "nhw2.json", base())).reason).toBe("max-runtime")
