@@ -723,12 +723,54 @@ def _branch_currency_observation(cur, head):
     return {"key": f"currency:{hashlib.sha256(encoded).hexdigest()}", **identity}
 
 
+def _claimed_currency_items(currency):
+    """Return unresolved mutation claims with the current item first.
+
+    Base or expected head movement may be the result of the claimed mutation. It is evidence to
+    reconcile, not permission to discard the claim and start another attempt.
+    """
+    items = currency.get("items") or {}
+    current_key = currency.get("current_key")
+    claimed = []
+    current = items.get(current_key)
+    if isinstance(current, dict) and current.get("disposition") == CURRENCY_CLAIMED:
+        claimed.append((current_key, current))
+    claimed.extend(
+        (key, item) for key, item in items.items()
+        if key != current_key and isinstance(item, dict)
+        and item.get("disposition") == CURRENCY_CLAIMED
+    )
+    return claimed
+
+
+def _prepare_claimed_currency_item(state, item):
+    invocation_id = state.get("invocation_id")
+    already_handled_here = (
+        item.get("claimed_invocation_id") == invocation_id
+        or item.get("reconciled_invocation_id") == invocation_id
+    )
+    item["attention"] = None if already_handled_here else CURRENCY_ATTENTION_RECONCILE
+    item["reconciliation_only"] = True
+    return item
+
+
 def _apply_branch_currency(state, cur, head, head_changed, now):
     currency = _load_branch_currency_state(state)
+    carried_claims = _claimed_currency_items(currency)
     if head_changed or (currency.get("head_sha") not in (None, head)):
         currency = _empty_branch_currency_state()
+        currency["items"] = dict(carried_claims)
         state["branch_currency_state"] = currency
     currency["head_sha"] = head
+
+    # An unresolved claim owns the branch-currency lane until it is explicitly reconciled. A base
+    # move or expected head move may be the mutation's result, so a new observation must not replace
+    # the old exact key or make the PR look clear in the meantime.
+    claimed_items = _claimed_currency_items(currency)
+    if claimed_items:
+        key, item = claimed_items[0]
+        currency["current_key"] = key
+        return _prepare_claimed_currency_item(state, item)
 
     observation = _branch_currency_observation(cur, head)
     if observation is None:
@@ -770,25 +812,22 @@ def _apply_branch_currency(state, cur, head, head_changed, now):
             item["attention"] = CURRENCY_ATTENTION_CLAIM
         item["reconciliation_only"] = False
     elif disposition == CURRENCY_CLAIMED:
-        invocation_id = state.get("invocation_id")
-        already_handled_here = (
-            item.get("claimed_invocation_id") == invocation_id
-            or item.get("reconciled_invocation_id") == invocation_id
-        )
-        item["attention"] = None if already_handled_here else CURRENCY_ATTENTION_RECONCILE
-        item["reconciliation_only"] = True
+        _prepare_claimed_currency_item(state, item)
     else:
         item["attention"] = None
         item["reconciliation_only"] = False
     items[key] = item
     currency["current_key"] = key
 
-    # Old observations on the same head are useful only when they carry a semantic park. Keep a
-    # small bounded tail for base-generation reconciliation; a head move above invalidates all of it.
+    # Old observations are useful only when they carry an unresolved claim or semantic park. Claims
+    # are never pruned; the small bounded tail applies only to parked base generations.
     retained = {item_key: value for item_key, value in items.items()
-                if item_key == key or value.get("disposition") == DISPOSITION_NEEDS_HUMAN}
+                if item_key == key
+                or value.get("disposition") in (CURRENCY_CLAIMED, DISPOSITION_NEEDS_HUMAN)}
     if len(retained) > 8:
-        parked_keys = [item_key for item_key in retained if item_key != key]
+        parked_keys = [item_key for item_key, value in retained.items()
+                       if item_key != key
+                       and value.get("disposition") == DISPOSITION_NEEDS_HUMAN]
         for item_key in parked_keys[:-7]:
             retained.pop(item_key, None)
     currency["items"] = retained
@@ -1836,8 +1875,7 @@ def _mark_branch_currency(args, state, now):
     disposition = args.currency_disposition
     allowed = {
         DISPOSITION_OPEN: {DISPOSITION_OPEN, CURRENCY_CLAIMED, DISPOSITION_NEEDS_HUMAN},
-        CURRENCY_CLAIMED: {CURRENCY_CLAIMED, CURRENCY_CONFIRMED, DISPOSITION_NEEDS_HUMAN,
-                           DISPOSITION_OPEN},
+        CURRENCY_CLAIMED: {CURRENCY_CLAIMED, CURRENCY_CONFIRMED, DISPOSITION_NEEDS_HUMAN},
         CURRENCY_CONFIRMED: {CURRENCY_CONFIRMED, DISPOSITION_OPEN},
         DISPOSITION_NEEDS_HUMAN: {DISPOSITION_NEEDS_HUMAN, DISPOSITION_OPEN},
     }
@@ -1846,6 +1884,17 @@ def _mark_branch_currency(args, state, now):
     if (prior == DISPOSITION_OPEN and disposition == CURRENCY_CLAIMED
             and item.get("inspection_required")):
         raise SystemExit("currency claim requires semantic-fingerprint inspection first")
+    if prior == DISPOSITION_OPEN and disposition == CURRENCY_CLAIMED:
+        retry_not_before = item.get("retry_not_before")
+        if retry_not_before:
+            try:
+                if _parse_iso8601(retry_not_before) > now:
+                    raise SystemExit("currency retry backoff has not elapsed")
+            except (ValueError, TypeError):
+                raise SystemExit("currency retry backoff is invalid")
+        budget = state.get("invocation_budget_seconds")
+        if budget is not None and _elapsed(state.get("started_at"), now) >= budget:
+            raise SystemExit("currency claim cannot start after max-runtime")
     item["disposition"] = disposition
     item["transitioned_at"] = _iso(now)
     if disposition == CURRENCY_CLAIMED:

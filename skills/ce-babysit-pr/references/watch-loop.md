@@ -93,11 +93,10 @@ State lives at `<scratch-root>/ce-babysit-pr/<host>-<owner>-<repo>-<pr>/state.js
   "mergeable": "MERGEABLE",
   "merge_state_status": "CLEAN",
   "base": { "host": "github.com", "repository": "owner/repo", "ref": "main", "oid": "base-sha" },
-  "host_branch_update_capability": true,
   "branch_currency_state": {
     "current_key": "currency:<identity-hash>",
     "head_sha": "abc123",
-    "items": { "<currency-key>": { "status": "BEHIND|DIRTY", "disposition": "open|claimed|confirmed|needs-human", "recovery_state": "claimed|mutation-observed|ambiguous|retry-authorized|retry-exhausted", "semantic_conflict_fingerprint": "<paths-and-stage-blobs>" } },
+    "items": { "<currency-key>": { "status": "BEHIND|DIRTY", "disposition": "open|claimed|confirmed|needs-human", "host_branch_update_capability": true, "recovery_state": "claimed|mutation-observed|ambiguous|retry-authorized|retry-exhausted", "semantic_conflict_fingerprint": "<paths-and-stage-blobs>" } },
     "semantic_parks": { "<fingerprint>": { "head_sha": "abc123", "status": "DIRTY", "route": "normal-base", "observation_key": "<currency-key>" } }
   },
   "pr_chain": {

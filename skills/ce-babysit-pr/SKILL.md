@@ -149,6 +149,7 @@ These are decisions the resolver judged would change intended behavior or need a
    - **Inspection and claim lifecycle.** If `attention == "inspect"`, first preview the current conflict and compute its semantic conflict fingerprint. Compare it with `parked_semantic_fingerprints`, then mark the exact item with `--currency-inspected-fingerprint <fingerprint>`. Unchanged evidence stays parked; changed evidence retires the old park and reopens the item. Do not claim before that inspection clears. For `attention == "claim"`, and only while fixed budget remains, atomically mark the exact item **before any external mutation or local merge starts**:
 
      ```bash
+     SKILL_DIR="<absolute path of this skill's directory>"; STATE_DIR="/tmp/compound-engineering-<effective-uid>/ce-babysit-pr/<host>-<owner>-<repo>-<N>"; RUN_INVOCATION_ID="<invocation_id>"; RUN_STARTED_AT="<invocation_started_at>"; RUN_BUDGET_SECONDS="<invocation_budget_seconds>";
      python3 "$SKILL_DIR/scripts/pr-snapshot" mark --state-dir "$STATE_DIR" --invocation-id "$RUN_INVOCATION_ID" --session-started-at "$RUN_STARTED_AT" --invocation-budget-seconds "$RUN_BUDGET_SECONDS" --currency-key <currency_key> --currency-disposition claimed
      ```
 
