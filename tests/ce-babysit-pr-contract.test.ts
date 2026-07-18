@@ -393,11 +393,18 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
       readRepoFile(BABYSIT),
       readRepoFile(WATCH_LOOP),
     ])
+    const pipelineStart = babysit.indexOf("2. **Bounded stop, not merge-ready.**")
+    const pipelineEnd = babysit.indexOf("3. **Native residual surfacing", pipelineStart)
+    const pipelineDelta = babysit.slice(pipelineStart, pipelineEnd)
 
     for (const text of [babysit, watchLoop]) {
       expect(text).toMatch(/success only when[^.]{0,320}`all_checks_ok`[^.]{0,320}`stack_blocker`[^.]{0,80}(null|clear)/i)
       expect(text).toMatch(/success only when[^.]{0,640}`branch_currency_blocker`[^.]{0,100}(null|clear)/i)
     }
+    expect(pipelineStart).toBeGreaterThan(-1)
+    expect(pipelineEnd).toBeGreaterThan(pipelineStart)
+    expect(pipelineDelta).toMatch(/`all_checks_ok`[\s\S]{0,260}`stack_blocker`[\s\S]{0,160}`branch_currency_blocker == null`/i)
+    expect(pipelineDelta).toMatch(/open\/claimed\/parked current currency item[^.]{0,240}residual/i)
   })
 
   test("branch-currency mutation is claimed, invocation-fenced, and reconciled before retry", async () => {
@@ -419,6 +426,9 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
 
   test("behind maintenance uses positive host capability and exact observed OIDs", async () => {
     const [babysit, watchLoop] = await Promise.all([readRepoFile(BABYSIT), readRepoFile(WATCH_LOOP)])
+    const behindStart = babysit.indexOf('- **`BEHIND`: host-owned update only.**')
+    const behindEnd = babysit.indexOf('- **`DIRTY`: exact-base local repair only.**', behindStart)
+    const behindBlock = babysit.slice(behindStart, behindEnd)
     for (const text of [babysit, watchLoop]) {
       expect(text).toContain("host_branch_update_capability == true")
       expect(text).toMatch(/(denied|false)[\s\S]{0,160}(unknown)[\s\S]{0,260}needs-human/i)
@@ -431,6 +441,10 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
       expect(text).toMatch(/422[^.]{0,180}(mismatch|stale|reconcile)/i)
     }
     expect(babysit).toMatch(/BEHIND[\s\S]{0,1000}revalidate[^.]{0,240}head[^.]{0,160}base OIDs/i)
+    expect(behindStart).toBeGreaterThan(-1)
+    expect(behindEnd).toBeGreaterThan(behindStart)
+    expect(behindBlock).toMatch(/confirm the exact claimed observation[^.]{0,180}fresh snapshot[^.]{0,180}ancestry evidence[^.]{0,180}observed base OID/i)
+    expect(behindBlock).toMatch(/claimed item's own `branch_currency_blocker`[^.]{0,120}need not be null beforehand/i)
   })
 
   test("dirty maintenance proves push authority, previews exact-base conflicts, and parks semantic choices", async () => {
