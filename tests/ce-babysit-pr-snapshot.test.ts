@@ -524,6 +524,42 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     expect(resumed.branch_currency.attention).toBe("reconcile")
   }, 20000)
 
+  test("branch currency: async evidence movement re-wakes a same-invocation mutation claim once", () => {
+    const behind = fetchFile(dir, "currency-async-mutation-behind.json", quietCurrencyFixture())
+    const observed = snapshot(state, behind)
+    markCurrency(state, observed.branch_currency.key, "claimed")
+    markCurrencyOutcome(state, observed.branch_currency.key, "mutation-observed")
+
+    const unchanged = snapshot(state, behind)
+    expect(unchanged.branch_currency).toMatchObject({
+      key: observed.branch_currency.key,
+      disposition: "claimed",
+      attention: null,
+      reconciliation_only: true,
+    })
+
+    const updated = fetchFile(dir, "currency-async-mutation-clean.json", quietCurrencyFixture({
+      head_sha: "s2",
+      mergeable: "MERGEABLE",
+      merge_state_status: "CLEAN",
+    }))
+    const moved = snapshot(state, updated)
+    expect(moved.branch_currency).toMatchObject({
+      key: observed.branch_currency.key,
+      disposition: "claimed",
+      attention: "reconcile",
+      reconciliation_only: true,
+      mutation_consumed: true,
+    })
+    expect(wakeReason(moved)).toBe("branch-currency")
+
+    markCurrency(state, observed.branch_currency.key, "confirmed")
+    const confirmed = snapshot(state, updated)
+    expect(confirmed.branch_currency).toBeNull()
+    expect(confirmed.branch_currency_blocker).toBeNull()
+    expect(wakeReason({ ...confirmed, quiet_seconds: 0 }, 300)).toBeNull()
+  }, 15000)
+
   test("branch currency: standing confirmed and needs-human residuals stay quiet, and max-runtime outranks new work", () => {
     const fetch = fetchFile(dir, "currency-standing.json", quietCurrencyFixture())
     for (const disposition of ["confirmed", "needs-human"]) {

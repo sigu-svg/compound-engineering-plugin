@@ -743,13 +743,20 @@ def _claimed_currency_items(currency):
     return claimed
 
 
-def _prepare_claimed_currency_item(state, item):
+def _prepare_claimed_currency_item(state, item, cur=None, head=None):
     invocation_id = state.get("invocation_id")
     already_handled_here = (
         item.get("claimed_invocation_id") == invocation_id
         or item.get("reconciled_invocation_id") == invocation_id
     )
-    item["attention"] = None if already_handled_here else CURRENCY_ATTENTION_RECONCILE
+    base = (cur or {}).get("base") or {}
+    mutation_evidence_moved = (
+        item.get("recovery_state") == CURRENCY_OUTCOME_MUTATION_OBSERVED
+        and ((head and head != item.get("head_sha"))
+             or (base.get("oid") and base.get("oid") != item.get("base_oid")))
+    )
+    item["attention"] = (CURRENCY_ATTENTION_RECONCILE
+                         if mutation_evidence_moved or not already_handled_here else None)
     item["reconciliation_only"] = True
     return item
 
@@ -770,7 +777,7 @@ def _apply_branch_currency(state, cur, head, head_changed, now):
     if claimed_items:
         key, item = claimed_items[0]
         currency["current_key"] = key
-        return _prepare_claimed_currency_item(state, item)
+        return _prepare_claimed_currency_item(state, item, cur, head)
 
     observation = _branch_currency_observation(cur, head)
     if observation is None:
@@ -814,7 +821,7 @@ def _apply_branch_currency(state, cur, head, head_changed, now):
             item["attention"] = CURRENCY_ATTENTION_CLAIM
         item["reconciliation_only"] = False
     elif disposition == CURRENCY_CLAIMED:
-        _prepare_claimed_currency_item(state, item)
+        _prepare_claimed_currency_item(state, item, cur, head)
     else:
         item["attention"] = None
         item["reconciliation_only"] = False
