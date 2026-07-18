@@ -94,6 +94,7 @@ Ask where the sweep's state file lives:
   if [ -L "$SCRATCH_ROOT" ]; then echo "unsafe scratch root symlink: $SCRATCH_ROOT" >&2; exit 1; fi;
   install -d -m 700 "$SCRATCH_ROOT" || exit 1;
   if [ -L "$SCRATCH_ROOT" ] || [ ! -O "$SCRATCH_ROOT" ]; then echo "scratch root is not owned by the current user: $SCRATCH_ROOT" >&2; exit 1; fi;
+  chmod 700 "$SCRATCH_ROOT" || exit 1;
   SWEEP_STATE_PATH="$SCRATCH_ROOT/ce-sweep/<repo-slug>/state.yml";
   SWEEP_STATE_DIR="$(dirname "$SWEEP_STATE_PATH")"; (umask 077; mkdir -p "$SWEEP_STATE_DIR") || exit 1; chmod 700 "$SWEEP_STATE_DIR" || exit 1;
   echo "$SWEEP_STATE_PATH";

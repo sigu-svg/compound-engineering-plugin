@@ -121,6 +121,7 @@ SCRATCH_ROOT="/tmp/compound-engineering-$(id -u)";
 if [ -L "$SCRATCH_ROOT" ]; then echo "unsafe scratch root symlink: $SCRATCH_ROOT" >&2; exit 1; fi;
 install -d -m 700 "$SCRATCH_ROOT" || exit 1;
 if [ -L "$SCRATCH_ROOT" ] || [ ! -O "$SCRATCH_ROOT" ]; then echo "scratch root is not owned by the current user: $SCRATCH_ROOT" >&2; exit 1; fi;
+chmod 700 "$SCRATCH_ROOT" || exit 1;
 MEDIA_DIR="$SCRATCH_ROOT/ce-sweep/<run-id>";
 (umask 077; mkdir -p "$MEDIA_DIR") || exit 1; chmod 700 "$MEDIA_DIR" || exit 1;
 ```

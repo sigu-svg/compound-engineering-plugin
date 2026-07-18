@@ -44,6 +44,7 @@ describe("owner-scoped scratch root", () => {
         expect(block).toMatch(/(?:\[ ! -L "\$SCRATCH_ROOT" \]|if \[ -L "\$SCRATCH_ROOT" \])/)
         expect(block).toContain('install -d -m 700 "$SCRATCH_ROOT"')
         expect(block).toMatch(/\[ !? ?-O "\$SCRATCH_ROOT" \]/)
+        expect(block).toContain('chmod 700 "$SCRATCH_ROOT"')
         offset = content.indexOf(ROOT_ASSIGNMENT, offset + ROOT_ASSIGNMENT.length)
       }
 
@@ -61,20 +62,23 @@ describe("owner-scoped scratch root", () => {
     const script = String.raw`
 root="$1/root"
 umask 0777
-[ ! -L "$root" ] && install -d -m 700 "$root" && [ -O "$root" ] || exit 9
+mkdir -p "$root" || exit 8
+chmod 755 "$root" || exit 8
+[ ! -L "$root" ] && install -d -m 700 "$root" && [ ! -L "$root" ] && [ -O "$root" ] && chmod 700 "$root" || exit 9
 run="$root/skill/run"
 (umask 077; mkdir -p "$run") || exit 10
 chmod 700 "$run" || exit 11
 touch "$run/artifact" || exit 11
 for dir in "$root" "$root/skill" "$run"; do
-  mode=$(stat -f '%Lp' "$dir" 2>/dev/null || stat -c '%a' "$dir")
+  mode=$(stat -c '%a' "$dir" 2>/dev/null)
+  case "$mode" in ''|*[!0-7]*) mode=$(stat -f '%Lp' "$dir" 2>/dev/null) ;; esac
   [ "$mode" = 700 ] || exit 12
 done
 target="$1/target"
 install -d -m 700 "$target"
 link="$1/link"
 ln -s "$target" "$link"
-[ ! -L "$link" ] && install -d -m 700 "$link" && [ -O "$link" ] && exit 13
+[ ! -L "$link" ] && install -d -m 700 "$link" && [ ! -L "$link" ] && [ -O "$link" ] && chmod 700 "$link" && exit 13
 exit 0
 `
     const parent = mkdtempSync(path.join(tmpdir(), "ce-scratch-contract-"))
