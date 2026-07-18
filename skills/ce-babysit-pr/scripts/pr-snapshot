@@ -151,6 +151,13 @@ def _host_args(host):
     return ["--hostname", host] if host else []
 
 
+def _eyes_reaction_count(reaction_groups):
+    """Aggregate current PR-body eyes reactions across GitHub reaction groups."""
+    return sum(
+        (group.get("users") or {}).get("totalCount", 0) or 0
+        for group in reaction_groups or [] if group.get("content") == "EYES")
+
+
 def _stack_schema_unavailable(stderr):
     """Recognize only GraphQL schema errors for the private-preview PullRequest stack fields."""
     unavailable_markers = ("doesn't exist on type", "does not exist on type",
@@ -423,9 +430,8 @@ def fetch(pr, repo):
     # (Codex among them) announce a review is *underway* — a present in-progress signal means the PR
     # is NOT settled, regardless of quiet time. A present signal is meaningful; absence tells us
     # nothing (many reviewers give no signal), so this only ever *delays* a merge-ready read.
-    review_in_progress = any(
-        g.get("content") == "EYES" and (g.get("users") or {}).get("totalCount", 0) > 0
-        for g in v.get("reactionGroups") or [])
+    review_signal_count = _eyes_reaction_count(v.get("reactionGroups"))
+    review_in_progress = review_signal_count > 0
 
     owner, name, host = _resolve_repo_ref(repo, v.get("url"))
     head = v.get("headRefOid")
@@ -438,6 +444,7 @@ def fetch(pr, repo):
         "url": v.get("url"),
         "checks": checks,
         "review_in_progress": review_in_progress,
+        "review_signal_count": review_signal_count,
         "threads": fetch_threads(pr, owner, name, host),
         # Non-thread feedback: top-level PR comments + review submission bodies. ce-resolve-pr-feedback
         # handles these too, so a Changes-Requested review body or an actionable top-level comment with
@@ -546,7 +553,8 @@ def _empty_state(pr, repo, url, now):
         "started_at": created_at, "invocation_id": None, "invocation_budget_seconds": None,
         "checks": {}, "threads": {}, "ci_dispatched": {},
         "review_decision": None, "mergeable": None, "merge_state_status": None,
-        "review_in_progress": False, "review_signal_seen_on_head": False,
+        "review_in_progress": False, "review_signal_count": 0,
+        "review_signal_seen_on_head": False,
         "review_signal_first_seen_at": None, "review_signal_last_changed_at": None,
         "pr_chain": _default_pr_chain(),
         "last_change_at": None, "last_action": None, "stop_reason": None,
@@ -769,7 +777,14 @@ def diff(state, cur, now=None, advance_trajectory=True):
     prior_feedback = state.get("feedback", {})
     prior_change_sig = _change_sig(state)
     prior_review_in_progress = bool(state.get("review_in_progress", False))
+    prior_review_signal_count = state.get("review_signal_count")
+    if prior_review_signal_count is None:
+        prior_review_signal_count = 1 if prior_review_in_progress else 0
     review_in_progress = bool(cur.get("review_in_progress", False))
+    review_signal_count = cur.get("review_signal_count")
+    if review_signal_count is None:
+        review_signal_count = 1 if review_in_progress else 0
+    review_in_progress = review_signal_count > 0
 
     if head_changed:
         # SHA-scoped state is meaningless on a new head.
@@ -784,7 +799,7 @@ def diff(state, cur, now=None, advance_trajectory=True):
             state["review_signal_seen_on_head"] = True
             legacy_seen_at = state.get("last_change_at") if prior_review_in_progress else None
             state["review_signal_first_seen_at"] = legacy_seen_at or _iso(now)
-        if review_in_progress != prior_review_in_progress:
+        if review_signal_count != prior_review_signal_count:
             state["review_signal_last_changed_at"] = _iso(now)
 
     # --- CI: a failing check on the current head is actionable until the agent
@@ -852,6 +867,7 @@ def diff(state, cur, now=None, advance_trajectory=True):
     state["mergeable"] = cur["mergeable"]
     state["merge_state_status"] = cur["merge_state_status"]
     state["review_in_progress"] = review_in_progress
+    state["review_signal_count"] = review_signal_count
     state["awaiting_approval"] = cur.get("awaiting_approval", 0)
     state["pr_chain"] = cur.get("pr_chain") or _default_pr_chain()
 
@@ -904,6 +920,7 @@ def diff(state, cur, now=None, advance_trajectory=True):
         "checks_present": bool(cur["checks"]),
         "all_checks_ok": all_checks_ok,
         "review_in_progress": review_in_progress,
+        "review_signal_count": review_signal_count,
         "review_signal_seen_on_head": bool(state.get("review_signal_seen_on_head", False)),
         "review_signal_first_seen_at": state.get("review_signal_first_seen_at"),
         "review_signal_last_changed_at": state.get("review_signal_last_changed_at"),
@@ -944,6 +961,7 @@ def _change_sig(state):
     feedback = {fid: v.get("disposition") for fid, v in state.get("feedback", {}).items()}
     return (checks, threads, feedback, state.get("review_decision"), state.get("mergeable"),
             state.get("merge_state_status"), state.get("review_in_progress"),
+            state.get("review_signal_count"),
             json.dumps(state.get("pr_chain") or _default_pr_chain(), sort_keys=True),
             # awaiting-approval clearing is movement: a fork gate lifting must reset the settle clock
             # so merge-ready waits for the now-imminent check-runs instead of firing on an empty rollup.

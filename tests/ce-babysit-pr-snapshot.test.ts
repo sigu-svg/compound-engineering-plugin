@@ -143,6 +143,21 @@ function extractFeedback(view: unknown): any[] {
   return JSON.parse(r.stdout.trim())
 }
 
+function eyesReactionCount(groups: unknown): number {
+  const r = spawnSync(
+    "python3",
+    [
+      "-c",
+      `import json; from importlib.machinery import SourceFileLoader; ` +
+        `m=SourceFileLoader('prs', ${JSON.stringify(SCRIPT)}).load_module(); ` +
+        `print(m._eyes_reaction_count(json.loads(${JSON.stringify(JSON.stringify(groups))})))`,
+    ],
+    { encoding: "utf8" },
+  )
+  expect(r.status, r.stderr).toBe(0)
+  return Number(r.stdout.trim())
+}
+
 function probeChain(options: {
   pr?: number
   url?: string
@@ -1838,6 +1853,57 @@ print(json.dumps({"ids": [t["thread_id"] for t in threads], "calls": calls}))
     expect(nextHead.review_signal_seen_on_head).toBe(false)
     expect(nextHead.review_signal_first_seen_at).toBeNull()
     expect(nextHead.review_signal_last_changed_at).toBeNull()
+  })
+
+  test("snapshot: eyes count changes reset quiet time while review remains in progress", () => {
+    expect(eyesReactionCount([
+      { content: "EYES", users: { totalCount: 1 } },
+      { content: "THUMBS_UP", users: { totalCount: 4 } },
+      { content: "EYES", users: { totalCount: 1 } },
+    ])).toBe(2)
+
+    const base = {
+      ...FAILING,
+      merge_state_status: "CLEAN",
+      review_decision: "APPROVED",
+      threads: [],
+      checks: [GREEN_CHECK],
+      review_in_progress: true,
+    }
+    const first = snapshot(state, fetchFile(dir, "signal-count-one.json", {
+      ...base,
+      review_signal_count: 1,
+    }))
+    expect(first.review_signal_count).toBe(1)
+    const statePath = path.join(state, "state.json")
+    const prior = JSON.parse(readFileSync(statePath, "utf8"))
+    prior.last_change_at = "2026-07-17T12:00:00+00:00"
+    prior.review_signal_last_changed_at = prior.last_change_at
+    writeFileSync(statePath, JSON.stringify(prior))
+
+    const added = snapshot(state, fetchFile(dir, "signal-count-two.json", {
+      ...base,
+      review_signal_count: 2,
+    }))
+    expect(added.review_in_progress).toBe(true)
+    expect(added.review_signal_count).toBe(2)
+    expect(added.review_signal_last_changed_at).not.toBe(prior.review_signal_last_changed_at)
+    expect(added.changed_this_tick).toBe(true)
+    expect(added.quiet_seconds).toBeLessThan(2)
+
+    const persisted = JSON.parse(readFileSync(statePath, "utf8"))
+    persisted.last_change_at = "2026-07-17T12:00:00+00:00"
+    persisted.review_signal_last_changed_at = persisted.last_change_at
+    writeFileSync(statePath, JSON.stringify(persisted))
+
+    const removed = snapshot(state, fetchFile(dir, "signal-count-back-to-one.json", {
+      ...base,
+      review_signal_count: 1,
+    }))
+    expect(removed.review_in_progress).toBe(true)
+    expect(removed.review_signal_count).toBe(1)
+    expect(removed.changed_this_tick).toBe(true)
+    expect(removed.quiet_seconds).toBeLessThan(2)
   })
 
   test("watch: a no-check MERGEABLE/CLEAN PR still reaches merge-ready (the >=1-check guard is pipeline-only)", () => {
