@@ -200,14 +200,12 @@ def ensure_owned_dirs(base: str, path: str) -> None:
     rel = os.path.relpath(path, base)
     comps = [] if rel == "." else rel.split(os.sep)
     cur = base
-    base_created = False
     try:
         os.mkdir(cur, 0o700)
-        base_created = True
     except FileExistsError:
         pass
-    if base_created:
-        os.chmod(cur, 0o700)
+    _check_owned_dir(cur)
+    os.chmod(cur, 0o700)
     _check_owned_dir(cur, require_private=True)
     for comp in comps:
         cur = os.path.join(cur, comp)

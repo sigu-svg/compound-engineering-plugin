@@ -116,6 +116,8 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 base = os.path.join(sys.argv[2], "root")
 path = os.path.join(base, "skill", "run", "jobs")
+os.mkdir(base, 0o755)
+os.chmod(base, 0o755)
 os.umask(0o777)
 mod.ensure_owned_dirs(base, path)
 assert all(stat.S_IMODE(os.lstat(p).st_mode) == 0o700 for p in (

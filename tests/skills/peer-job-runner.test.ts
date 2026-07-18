@@ -179,13 +179,13 @@ describe("peer-job-runner lifecycle", () => {
     expect(statSync(dir).mode & 0o777).toBe(0o700)
   }, 20000)
 
-  test("rejects an existing root that is not owner-private", () => {
+  test("repairs an existing owner-owned root that is not private", () => {
     const root = makeRoot()
     chmodSync(root, 0o755)
     const stub = writeStub("exit 0\n")
     const result = startJob(root, FAST, [stub]).res
-    expect(result.code).toBe(1)
-    expect(result.stderr).toContain("must have mode 0700")
+    expect(result.code).toBe(0)
+    expect(statSync(root).mode & 0o777).toBe(0o700)
   })
 
   test("detach survival: worker outlives the launching spawnSync and keeps writing", () => {
