@@ -300,16 +300,18 @@ describe("ce-babysit-pr cross-skill contract parity", () => {
     expect(watchLoop).toMatch(/one active (PR )?(target|watcher)/i)
   })
 
-  test("managed-stack continuation preserves one invocation-wide session budget", async () => {
+  test("managed-stack continuation preserves one fixed invocation budget", async () => {
     const [babysit, watchLoop] = await Promise.all([
       readRepoFile(BABYSIT),
       readRepoFile("skills/ce-babysit-pr/references/watch-loop.md"),
     ])
 
     for (const text of [babysit, watchLoop]) {
+      expect(text).toContain("--invocation-id \"$RUN_INVOCATION_ID\"")
       expect(text).toContain("--session-started-at \"$RUN_STARTED_AT\"")
-      expect(text).toMatch(/invocation-wide[^.]{0,220}(budget|session)/i)
-      expect(text).toMatch(/(next|new)[^.]{0,180}(layer|state dir)[^.]{0,220}(same|preserve|carry)[^.]{0,120}RUN_STARTED_AT/i)
+      expect(text).toContain("--invocation-budget-seconds \"$RUN_BUDGET_SECONDS\"")
+      expect(text).toMatch(/(one|same|fixed)[^.]{0,220}(invocation )?budget/i)
+      expect(text).toMatch(/(layer|state dir)[^.]{0,260}(same|fixed|continue-invocation)[^.]{0,180}(invocation|budget)/i)
     }
   })
 

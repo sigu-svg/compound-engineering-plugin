@@ -16,14 +16,43 @@ function fetchFile(dir: string, name: string, obj: unknown): string {
   return p
 }
 
+function persistedInvocationArgs(stateDir: string): string[] {
+  if (!existsSync(path.join(stateDir, "state.json"))) return []
+  const state = JSON.parse(readFileSync(path.join(stateDir, "state.json"), "utf8"))
+  if (!state.invocation_id || !state.started_at || !state.invocation_budget_seconds) return []
+  return ["--invocation-id", state.invocation_id, "--session-started-at", state.started_at,
+    "--invocation-budget-seconds", String(state.invocation_budget_seconds)]
+}
+
 function snapshot(stateDir: string, fetch: string, extra: string[] = []): any {
+  const hasInvocationMode = extra.includes("--start-invocation")
+    || extra.includes("--reset-session")
+    || extra.includes("--continue-invocation")
+    || extra.includes("--invocation-id")
+  const persistedArgs = !hasInvocationMode ? persistedInvocationArgs(stateDir) : []
+  const startsInvocation = (!hasInvocationMode && persistedArgs.length === 0)
+    || extra.includes("--start-invocation")
+    || extra.includes("--reset-session")
+  const budgetArgs = startsInvocation && !extra.includes("--invocation-budget-seconds")
+    ? ["--invocation-budget-seconds", "1"]
+    : []
   const r = spawnSync(
     "python3",
-    [SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", stateDir, "--fetch-file", fetch, ...extra],
+    [SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", stateDir, "--fetch-file", fetch,
+      ...(hasInvocationMode ? [] : persistedArgs.length > 0 ? persistedArgs : ["--start-invocation"]),
+      ...budgetArgs, ...extra],
     { encoding: "utf8" },
   )
   expect(r.status, r.stderr).toBe(0)
   return JSON.parse(r.stdout)
+}
+
+function currentInvocationArgs(stateDir: string, fetch: string): string[] {
+  const persistedArgs = persistedInvocationArgs(stateDir)
+  if (persistedArgs.length > 0) return persistedArgs
+  const started = snapshot(stateDir, fetch, ["--start-invocation", "--invocation-budget-seconds", "1"])
+  return ["--invocation-id", started.invocation_id, "--session-started-at", started.invocation_started_at,
+    "--invocation-budget-seconds", String(started.invocation_budget_seconds)]
 }
 
 function mark(stateDir: string, args: string[]): void {
@@ -37,10 +66,11 @@ function mark(stateDir: string, args: string[]): void {
 }
 
 function watch(stateDir: string, fetch: string, extra: string[] = []): any {
+  const invocationArgs = extra.includes("--invocation-id") ? [] : currentInvocationArgs(stateDir, fetch)
   const r = spawnSync(
     "python3",
     [SCRIPT, "watch", "--pr", "1", "--repo", "o/r", "--state-dir", stateDir, "--fetch-file", fetch,
-      "--interval", "0.1", "--max-runtime", "1", ...extra],
+      "--interval", "0.1", ...invocationArgs, ...extra],
     { encoding: "utf8", timeout: 5000 },
   )
   expect(r.status, r.stderr).toBe(0)
@@ -48,10 +78,11 @@ function watch(stateDir: string, fetch: string, extra: string[] = []): any {
 }
 
 function startWatch(stateDir: string, fetch: string, extra: string[] = []) {
+  const invocationArgs = extra.includes("--invocation-id") ? [] : currentInvocationArgs(stateDir, fetch)
   const child = spawn(
     "python3",
     [SCRIPT, "watch", "--pr", "1", "--repo", "o/r", "--state-dir", stateDir, "--fetch-file", fetch,
-      "--interval", "0.05", "--max-runtime", "5", ...extra],
+      "--interval", "0.05", ...invocationArgs, ...extra],
     { stdio: ["ignore", "pipe", "pipe"] },
   )
   let stdout = ""
@@ -648,33 +679,104 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     expect(d.trajectory.check_recur_max).toBe(1) // fail -> clear(seen only on a poll) -> fail = recurrence
   }, 15000)
 
-  test("--reset-session restarts the budget clock so a resumed watch is not instantly over-budget", () => {
+  test("snapshot refuses to inherit an old budget without an explicit invocation boundary", () => {
     const sd = path.join(dir, "sess")
-    snapshot(sd, fetchFile(dir, "se1.json", FAILING)) // creates state with started_at = now
+    snapshot(sd, fetchFile(dir, "se1.json", FAILING))
     // simulate resuming days later against persisted state: backdate started_at
     const statePath = path.join(sd, "state.json")
     const st = JSON.parse(readFileSync(statePath, "utf8"))
     st.started_at = "2020-01-01T00:00:00Z"
     writeFileSync(statePath, JSON.stringify(st))
-    // without reset -> session_seconds is huge (measured from 2020)
-    expect(snapshot(sd, fetchFile(dir, "se2.json", FAILING)).session_seconds).toBeGreaterThan(1_000_000)
-    // with --reset-session -> the clock restarts, session_seconds ~0
-    const r = spawnSync("python3", [SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
-      "--fetch-file", fetchFile(dir, "se3.json", FAILING), "--reset-session"], { encoding: "utf8" })
-    expect(r.status, r.stderr).toBe(0)
-    expect(JSON.parse(r.stdout).session_seconds).toBeLessThan(10)
+    const bare = spawnSync("python3", [SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
+      "--fetch-file", fetchFile(dir, "se2.json", FAILING)], { encoding: "utf8" })
+    expect(bare.status).not.toBe(0)
+    expect(bare.stderr).toContain("requires --start-invocation or --invocation-id")
+
+    const fresh = snapshot(sd, fetchFile(dir, "se3.json", FAILING), ["--start-invocation"])
+    expect(fresh.invocation_elapsed_seconds).toBeLessThan(10)
   })
+
+  test("a new invocation defaults to one fixed eight-hour budget", () => {
+    const sd = path.join(dir, "default-invocation-budget")
+    const r = spawnSync("python3", [
+      SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
+      "--fetch-file", fetchFile(dir, "default-invocation-budget.json", FAILING),
+      "--start-invocation",
+    ], { encoding: "utf8" })
+
+    expect(r.status, r.stderr).toBe(0)
+    const value = JSON.parse(r.stdout)
+    expect(value.invocation_budget_seconds).toBe(28_800)
+    expect(value.invocation_remaining_seconds).toBeGreaterThan(28_790)
+  })
+
+  test("a new invocation preserves PR history but receives one fresh fixed eight-hour budget", () => {
+    const sd = path.join(dir, "invocation-boundary")
+    const current = {
+      ...FAILING,
+      threads: [{ thread_id: "T1", last_comment_id: "C1", last_comment_at: "C1" }],
+      checks: [{ key: "CI/test", name: "test", status: "IN_PROGRESS", conclusion: null, details_url: "u" }],
+    }
+    const initial = snapshot(sd, fetchFile(dir, "ib1.json", current), [
+      "--start-invocation", "--invocation-budget-seconds", "28800",
+    ])
+    mark(sd, ["--thread", "T1", "--disposition", "dispatched"])
+
+    const statePath = path.join(sd, "state.json")
+    const old = JSON.parse(readFileSync(statePath, "utf8"))
+    old.state_created_at = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
+    old.started_at = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+    old.trajectory.stream_series = ["review", "ci"]
+    writeFileSync(statePath, JSON.stringify(old))
+
+    // A later explicit skill invocation does not opt into the old clock. Durable review and
+    // trajectory state survives, while the invocation clock starts near zero by default.
+    const fresh = snapshot(sd, fetchFile(dir, "ib2.json", current), [
+      "--start-invocation", "--invocation-budget-seconds", "28800",
+    ])
+    expect(fresh.invocation_id).not.toBe(initial.invocation_id)
+    expect(fresh.invocation_elapsed_seconds).toBeLessThanOrEqual(1)
+    expect(fresh.persisted_state_age_seconds).toBeGreaterThan(28_700)
+    expect(fresh.counts.threads).toBe(0)
+    expect(JSON.parse(readFileSync(statePath, "utf8")).trajectory.stream_series).toEqual(["review", "ci"])
+
+    // Re-arms present the invocation token and preserve its fixed anchor. Put that anchor one
+    // second before the real eight-hour cap so the watch proves it stops against the same budget.
+    const almostExpired = new Date(Date.now() - 28_799_000).toISOString().replace("Z", "+00:00")
+    const persisted = JSON.parse(readFileSync(statePath, "utf8"))
+    persisted.started_at = almostExpired
+    writeFileSync(statePath, JSON.stringify(persisted))
+
+    const rearmed = snapshot(sd, fetchFile(dir, "ib3.json", current), [
+      "--invocation-id", fresh.invocation_id,
+      "--session-started-at", almostExpired,
+      "--invocation-budget-seconds", "28800",
+    ])
+    expect(rearmed.invocation_id).toBe(fresh.invocation_id)
+    expect(rearmed.invocation_started_at).toBe(almostExpired)
+
+    const wake = watch(sd, fetchFile(dir, "ib4.json", current), [
+      "--invocation-id", fresh.invocation_id,
+      "--session-started-at", almostExpired,
+      "--invocation-budget-seconds", "28800",
+    ])
+    expect(wake.reason).toBe("max-runtime")
+    expect(wake.invocation_elapsed_seconds).toBeGreaterThanOrEqual(28_800)
+    expect(wake.invocation_budget_seconds).toBe(28_800)
+    expect(wake.invocation_started_at).toBe(almostExpired)
+  }, 10000)
 
   test("an invocation session start carries into a new managed-stack layer state dir", () => {
     const started = new Date(Date.now() - 3_600_000).toISOString()
     const d = snapshot(
       path.join(dir, "next-layer"),
       fetchFile(dir, "next-layer.json", FAILING),
-      ["--session-started-at", started],
+      ["--continue-invocation", "--invocation-id", "managed-stack-invocation",
+        "--session-started-at", started, "--invocation-budget-seconds", "28800"],
     )
 
-    expect(new Date(d.session_started_at).getTime()).toBe(new Date(started).getTime())
-    expect(d.session_seconds).toBeGreaterThan(3_500)
+    expect(new Date(d.invocation_started_at).getTime()).toBe(new Date(started).getTime())
+    expect(d.invocation_elapsed_seconds).toBeGreaterThan(3_500)
   })
 
   test("re-arming watch preserves the invocation budget instead of resetting it", () => {
@@ -685,31 +787,74 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
       threads: [],
       checks: [{ key: "CI/test", name: "test", status: "IN_PROGRESS", conclusion: null, details_url: "u" }],
     }
-    snapshot(sd, fetchFile(dir, "watch-budget-snapshot.json", waiting), ["--session-started-at", started])
+    snapshot(sd, fetchFile(dir, "watch-budget-snapshot.json", waiting), [
+      "--continue-invocation", "--invocation-id", "watch-budget-invocation",
+      "--session-started-at", started, "--invocation-budget-seconds", "1",
+    ])
 
     const wake = watch(
       sd,
       fetchFile(dir, "watch-budget-watch.json", waiting),
-      ["--session-started-at", started],
+      ["--invocation-id", "watch-budget-invocation", "--session-started-at", started,
+        "--invocation-budget-seconds", "1"],
     )
 
     expect(wake.reason).toBe("max-runtime")
   }, 15000)
 
-  test("watch --reset-session resets once, not on every poll", () => {
+  test("a re-arm cannot extend the fixed invocation budget", () => {
+    const sd = path.join(dir, "watch-budget-extension")
+    const started = snapshot(sd, fetchFile(dir, "watch-budget-extension-start.json", FAILING), [
+      "--start-invocation", "--invocation-budget-seconds", "28800",
+    ])
+    const r = spawnSync("python3", [
+      SCRIPT, "snapshot", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
+      "--fetch-file", fetchFile(dir, "watch-budget-extension-resume.json", FAILING),
+      "--invocation-id", started.invocation_id,
+      "--session-started-at", started.invocation_started_at,
+      "--invocation-budget-seconds", "57600",
+    ], { encoding: "utf8" })
+
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toContain("does not match the persisted fixed budget")
+    expect(JSON.parse(readFileSync(path.join(sd, "state.json"), "utf8")).invocation_budget_seconds).toBe(28800)
+  })
+
+  test("the fixed cap outranks newly actionable work instead of allowing another round", () => {
+    const sd = path.join(dir, "budget-outranks-actionable")
+    const started = new Date(Date.now() - 2_000).toISOString()
+    snapshot(sd, fetchFile(dir, "budget-outranks-actionable-start.json", FAILING), [
+      "--continue-invocation", "--invocation-id", "expired-actionable-invocation",
+      "--session-started-at", started, "--invocation-budget-seconds", "1",
+    ])
+
+    const wake = watch(sd, fetchFile(dir, "budget-outranks-actionable-watch.json", FAILING), [
+      "--invocation-id", "expired-actionable-invocation",
+      "--session-started-at", started, "--invocation-budget-seconds", "1",
+    ])
+    expect(wake.reason).toBe("max-runtime")
+    expect(wake.invocation_elapsed_seconds).toBeGreaterThanOrEqual(2)
+  })
+
+  test("watch cannot start or reset an invocation budget", () => {
+    const sd = path.join(dir, "watch-cannot-reset")
     const waiting = {
       ...FAILING,
       threads: [],
       checks: [{ key: "CI/test", name: "test", status: "IN_PROGRESS", conclusion: null, details_url: "u" }],
     }
-    const wake = watch(
-      path.join(dir, "watch-reset-once"),
-      fetchFile(dir, "watch-reset-once.json", waiting),
-      ["--reset-session"],
-    )
-
-    expect(wake.reason).toBe("max-runtime")
-  }, 10000)
+    const started = snapshot(sd, fetchFile(dir, "watch-cannot-reset-start.json", waiting), ["--start-invocation"])
+    const r = spawnSync("python3", [
+      SCRIPT, "watch", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
+      "--fetch-file", fetchFile(dir, "watch-cannot-reset-watch.json", waiting),
+      "--invocation-id", started.invocation_id,
+      "--session-started-at", started.invocation_started_at,
+      "--invocation-budget-seconds", String(started.invocation_budget_seconds),
+      "--reset-session",
+    ], { encoding: "utf8" })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toContain("unrecognized arguments: --reset-session")
+  })
 
   test("clearing a fork approval gate is movement (resets the settle clock so merge-ready waits for check-runs)", () => {
     const sd = path.join(dir, "appr")
@@ -990,7 +1135,10 @@ describe("ce-babysit-pr pr-snapshot engine", () => {
     const r = spawnSync(
       "python3",
       [SCRIPT, "watch", "--pr", "1", "--repo", "o/r", "--state-dir", sd,
-        "--fetch-file", missingFetch, "--stop-file", stopFile],
+        "--fetch-file", missingFetch, "--stop-file", stopFile,
+        "--invocation-id", incumbent.invocation_id,
+        "--session-started-at", incumbent.started_at,
+        "--invocation-budget-seconds", String(incumbent.invocation_budget_seconds)],
       { encoding: "utf8", timeout: 5000 },
     )
 
@@ -1145,9 +1293,13 @@ from types import SimpleNamespace
 m = SourceFileLoader("prs", ${JSON.stringify(SCRIPT)}).load_module()
 state_dir = ${JSON.stringify(sd)}
 state_path = ${JSON.stringify(statePath)}
+invocation = json.load(open(state_path))
 args = SimpleNamespace(state_dir=state_dir, pr=1, repo="o/r",
                        fetch_file=${JSON.stringify(successor)}, reset_session=False,
-                       session_started_at=None)
+                       start_invocation=False, continue_invocation=False,
+                       invocation_id=invocation["invocation_id"],
+                       session_started_at=invocation["started_at"],
+                       invocation_budget_seconds=invocation["invocation_budget_seconds"])
 generation = "successor-generation"
 m._reserve_watch_candidate(args, generation)
 cur = m._fetch_snapshot(args)
@@ -1158,12 +1310,17 @@ child = None
 def diff_with_incumbent_race(state, current, now=None, advance_trajectory=True):
     global child
     child_code = '''
+import json
 from importlib.machinery import SourceFileLoader
 from types import SimpleNamespace
 m = SourceFileLoader("prs_child", ${JSON.stringify(SCRIPT)}).load_module()
+invocation = json.load(open(${JSON.stringify(statePath)}))
 args = SimpleNamespace(state_dir=${JSON.stringify(sd)}, pr=1, repo="o/r",
                        fetch_file=${JSON.stringify(incumbent)}, reset_session=False,
-                       session_started_at=None)
+                       start_invocation=False, continue_invocation=False,
+                       invocation_id=invocation["invocation_id"],
+                       session_started_at=invocation["started_at"],
+                       invocation_budget_seconds=invocation["invocation_budget_seconds"])
 try:
     m._run_snapshot(args, m._now(), advance_trajectory=False,
                     watch_generation="incumbent-generation")
@@ -1485,8 +1642,10 @@ print(json.dumps({"ids": [t["thread_id"] for t in threads], "calls": calls}))
     mark(sd, ["--thread", "T1", "--disposition", "needs-human"])
     // parked needs-human, nothing else actionable -> keeps watching, times out (does NOT wake needs-human)
     expect(watch(sd, fetchFile(dir, "nhw2.json", base())).reason).toBe("max-runtime")
-    // a new actionable thread arrives while the needs-human stays parked -> wakes on the new work
+    // The capped invocation is over. A later explicit invocation preserves the parked disposition,
+    // while a new actionable thread still wakes that new invocation.
     const withNew = fetchFile(dir, "nhw3.json", base([{ thread_id: "T2", last_comment_id: "D1", last_comment_at: "D1" }]))
+    snapshot(sd, withNew, ["--start-invocation"])
     expect(watch(sd, withNew).reason).toBe("actionable")
   }, 15000)
 })
