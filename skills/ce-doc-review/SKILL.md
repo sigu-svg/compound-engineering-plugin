@@ -29,9 +29,9 @@ If `mode:report` is present, set **report-only mode** for the rest of the workfl
 
 The caller receives findings with their original classifications intact and decides what to do with them.
 
-**Headless argument contract:** Require `mode:headless <document-path>`, for example `mode:headless docs/plans/my-plan.md`.
+**Non-interactive argument contract:** Require `mode:headless <document-path>` (for example `mode:headless docs/plans/my-plan.md`) — or `mode:report <document-path>`, which implies the headless interaction model on its own (see above); the two tokens may also be combined.
 
-If `mode:headless` is not present, run in default interactive mode with the routing question, walk-through, and bulk-preview behaviors documented in `references/walkthrough.md` and `references/bulk-preview.md`.
+If neither `mode:headless` nor `mode:report` is present, run in default interactive mode with the routing question, walk-through, and bulk-preview behaviors documented in `references/walkthrough.md` and `references/bulk-preview.md`. (`mode:report` alone selects the headless interaction model with every apply path disabled — never interactive mode.)
 
 ## Phase 1: Get and Analyze Document
 
