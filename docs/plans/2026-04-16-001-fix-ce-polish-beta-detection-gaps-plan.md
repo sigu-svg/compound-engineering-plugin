@@ -9,7 +9,7 @@ date: 2026-04-16
 
 ## Overview
 
-Address four concrete detection/resolution gaps in `ce-polish-beta` raised by @tmchow on EveryInc/compound-engineering-plugin#568:
+Address four concrete detection/resolution gaps in `ce-polish-beta` raised by @tmchow on sigu-svg/compound-engineering-plugin#568:
 
 1. Framework coverage — Nuxt, SvelteKit, Remix, Astro fall through to `unknown` (the commenter calls them "table stakes alongside Next and Vite")
 2. Monorepo blind spot — `detect-project-type.sh` only inspects the repo root, so a Turborepo with `apps/web/next.config.js` returns `unknown`
@@ -444,7 +444,7 @@ None directly applicable; this work extends patterns already proven in the same 
 
 ## Sources & References
 
-- **Origin:** PR feedback from @tmchow on EveryInc/compound-engineering-plugin#568 ([comment](https://github.com/EveryInc/compound-engineering-plugin/pull/568#issuecomment-4254733274))
+- **Origin:** PR feedback from @tmchow on sigu-svg/compound-engineering-plugin#568 ([comment](https://github.com/sigu-svg/compound-engineering-plugin/pull/568#issuecomment-4254733274))
 - **Previous plan:** `docs/plans/2026-04-15-001-feat-ce-polish-skill-plan.md` (feature this fixes)
 - **Related files:**
   - `plugins/compound-engineering/skills/ce-polish-beta/scripts/detect-project-type.sh`

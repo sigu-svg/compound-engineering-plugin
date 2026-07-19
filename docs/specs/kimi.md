@@ -47,7 +47,7 @@ Kimi also supports a custom marketplace JSON source. The catalog schema uses:
     {
       "id": "compound-engineering",
       "displayName": "Compound Engineering",
-      "source": "https://github.com/EveryInc/compound-engineering-plugin"
+      "source": "https://github.com/sigu-svg/compound-engineering-plugin"
     }
   ]
 }
@@ -60,13 +60,13 @@ The marketplace catalog has no release-owned `metadata.version` equivalent. Trea
 Direct install from GitHub:
 
 ```text
-/plugins install https://github.com/EveryInc/compound-engineering-plugin
+/plugins install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Marketplace browsing:
 
 ```text
-/plugins marketplace https://raw.githubusercontent.com/EveryInc/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
+/plugins marketplace https://raw.githubusercontent.com/sigu-svg/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
 ```
 
 After installing, enabling, disabling, or removing a plugin, Kimi requires `/reload` or a new session for changes to apply.

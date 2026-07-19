@@ -73,5 +73,5 @@ The diagnostic guard fixes the separate observability failure because short stri
 - [Portable agent skill authoring](../skill-design/portable-agent-skill-authoring.md) — the umbrella rule for verifying load-bearing behavior in the actual target harness.
 - [Cross-harness cross-model tool invocation](../skill-design/cross-harness-cross-model-tool-invocation.md) — the sibling empirical verification pattern for cross-harness mechanics.
 - [CE doc-review calibration patterns](../skill-design/ce-doc-review-calibration-patterns.md) — distinguishes model output conformance from CLI acceptance of the input schema.
-- [Issue #835](https://github.com/EveryInc/compound-engineering-plugin/issues/835) — adjacent cross-model review output differences, not the same startup-validation failure.
-- [Issue #1115](https://github.com/EveryInc/compound-engineering-plugin/issues/1115) — adjacent provider-routing work on the same cross-model launcher surface.
+- [Issue #835](https://github.com/sigu-svg/compound-engineering-plugin/issues/835) — adjacent cross-model review output differences, not the same startup-validation failure.
+- [Issue #1115](https://github.com/sigu-svg/compound-engineering-plugin/issues/1115) — adjacent provider-routing work on the same cross-model launcher surface.

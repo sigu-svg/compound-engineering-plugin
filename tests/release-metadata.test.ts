@@ -120,7 +120,7 @@ async function makeFixtureRoot(): Promise<string> {
             name: "compound-engineering",
             source: {
               source: "url",
-              url: "https://github.com/EveryInc/compound-engineering-plugin.git",
+              url: "https://github.com/sigu-svg/compound-engineering-plugin.git",
             },
           },
         ],
@@ -150,7 +150,7 @@ async function makeFixtureRoot(): Promise<string> {
           {
             id: "compound-engineering",
             displayName: "Compound Engineering",
-            source: "https://github.com/EveryInc/compound-engineering-plugin",
+            source: "https://github.com/sigu-svg/compound-engineering-plugin",
           },
         ],
       },

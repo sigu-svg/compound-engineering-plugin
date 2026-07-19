@@ -11,7 +11,7 @@ As the Claude Code plugin ecosystem grows, generic skill names like `setup`, `pl
 
 Standardizing on a `ce-` hyphen prefix for all owned skills and agents eliminates collisions, creates a consistent namespace, simplifies agent references, and removes the colon character that requires filesystem sanitization on Windows.
 
-Related: [GitHub Issue #337](https://github.com/EveryInc/compound-engineering-plugin/issues/337)
+Related: [GitHub Issue #337](https://github.com/sigu-svg/compound-engineering-plugin/issues/337)
 
 ## Requirements
 

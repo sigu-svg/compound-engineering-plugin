@@ -9,8 +9,8 @@ and self-hosted-catalog paths (below) already track the repository automatically
 
 | Path | Command | Version tracking | Ongoing cost |
 |---|---|---|---|
-| Direct install | `grok plugin install EveryInc/compound-engineering-plugin` | tracks repo HEAD; `grok plugin update` pulls latest | none |
-| Self-hosted catalog | `grok plugin marketplace add EveryInc/compound-engineering-plugin` | our `.grok-plugin/marketplace.json` uses a bare Git URL source (no SHA) → tracks HEAD | none |
+| Direct install | `grok plugin install sigu-svg/compound-engineering-plugin` | tracks repo HEAD; `grok plugin update` pulls latest | none |
+| Self-hosted catalog | `grok plugin marketplace add sigu-svg/compound-engineering-plugin` | our `.grok-plugin/marketplace.json` uses a bare Git URL source (no SHA) → tracks HEAD | none |
 | Official xAI catalog | browse/install from `xAI Official` marketplace | a **SHA-pinned** remote source entry in xAI's repo | one PR per promoted version |
 
 Only the official catalog carries per-version cost: xAI requires remote sources
@@ -30,10 +30,10 @@ bumps the SHA. Point contributors who want the latest at direct install instead.
      "category": "development",
      "source": {
        "source": "url",
-       "url": "https://github.com/EveryInc/compound-engineering-plugin.git",
+       "url": "https://github.com/sigu-svg/compound-engineering-plugin.git",
        "sha": "<full-40-char-commit-sha>"
      },
-     "homepage": "https://github.com/EveryInc/compound-engineering-plugin",
+     "homepage": "https://github.com/sigu-svg/compound-engineering-plugin",
      "keywords": ["compound-engineering", "compound engineering", "ce-plan", "ce-work"]
    }
    ```
@@ -41,7 +41,7 @@ bumps the SHA. Point contributors who want the latest at direct install instead.
 3. Pin the SHA to the commit you want to ship (a real commit, not a branch or tag):
 
    ```bash
-   git ls-remote https://github.com/EveryInc/compound-engineering-plugin.git HEAD
+   git ls-remote https://github.com/sigu-svg/compound-engineering-plugin.git HEAD
    ```
 
 4. Regenerate their component index and validate locally (this is what their CI runs):
@@ -56,7 +56,7 @@ bumps the SHA. Point contributors who want the latest at direct install instead.
 
 ## Notes
 
-- **Source from the official org.** The `source.url` must be `EveryInc/compound-engineering-plugin` (our org), not a personal fork — xAI flags personal-account sources for branded plugins as possible impersonation.
+- **Source from the official org.** The `source.url` must be `sigu-svg/compound-engineering-plugin` (our org), not a personal fork — xAI flags personal-account sources for branded plugins as possible impersonation.
 - **To roll out an update**, bump the pinned `sha` in the same entry and regenerate the index — do not open a parallel duplicate entry.
 - **Keep `keywords` brand-scoped.** They power Grok's plugin CTA; generic terms (`ai`, `cli`, `workflow`) get pushed back because they mis-fire on unrelated requests.
 - A local source (vendoring our files under xAI's `external_plugins/compound-engineering/`) is also accepted, but requires re-vendoring on every update — the remote source above is lighter to maintain.

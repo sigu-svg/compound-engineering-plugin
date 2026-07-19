@@ -223,7 +223,7 @@ The result should be committed as data, and tests should fail when the current o
 - Use the existing root `.claude-plugin/marketplace.json`; Copilot CLI explicitly looks there for marketplace metadata.
 - Use the existing plugin-local `.claude-plugin/plugin.json`; Copilot CLI can discover plugin manifests from `.claude-plugin/plugin.json`.
 - Document Copilot native install instructions:
-  - `copilot plugin marketplace add EveryInc/compound-engineering-plugin`
+  - `copilot plugin marketplace add sigu-svg/compound-engineering-plugin`
   - `copilot plugin install compound-engineering@compound-engineering-plugin`
 - Keep plugin agents as agents, not generated skills.
 - Do not create parallel `.github/plugin` metadata or `agents-copilot/` output unless a real compatibility failure is proven.
@@ -350,7 +350,7 @@ The result should be committed as data, and tests should fail when the current o
 - `bun run release:validate` after native package manifests or plugin inventory changes.
 - Manual smoke tests for native installers:
   - Claude: `/plugin install compound-engineering`
-  - Copilot: `copilot plugin marketplace add EveryInc/compound-engineering-plugin` then install
+  - Copilot: `copilot plugin marketplace add sigu-svg/compound-engineering-plugin` then install
   - Gemini: `gemini extensions install <repo-url-or-local-path>`
   - Pi: `pi install npm:<package>` or local package path
 - Cleanup smoke test with seeded temp homes for `~/.agents`, `~/.codex`, `~/.copilot`, `~/.gemini`, `~/.pi`, `~/.config/opencode`, and `~/.factory`.

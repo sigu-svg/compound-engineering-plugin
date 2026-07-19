@@ -157,6 +157,6 @@ both `SKILL.md` files point to the rule.
 
 ## Sources & References
 
-- Issue: EveryInc/compound-engineering-plugin#606
+- Issue: sigu-svg/compound-engineering-plugin#606
 - Prior art: PR #603 (`fix(ce-release-notes): backtick-wrap <skill-name> token`)
 - Related tests: `tests/frontmatter.test.ts`, `tests/compound-support-files.test.ts`

@@ -22,13 +22,13 @@ All facts below were verified by building a fixture plugin and running `agy plug
 `agy` installs a plugin from a **local directory** or a **remote Git repository URL** when the source contains a root `plugin.json`:
 
 ```bash
-agy plugin install https://github.com/EveryInc/compound-engineering-plugin
+agy plugin install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Local checkout (repository root or bundled `.agy/` entry point):
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 agy plugin install ./compound-engineering-plugin
 agy plugin install ./compound-engineering-plugin/.agy   # equivalent via symlinked manifest
 ```

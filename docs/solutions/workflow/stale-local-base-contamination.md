@@ -26,7 +26,7 @@ When multiple agent sessions (Claude Code, Cursor, Codex, plus any humans) share
 
 When a session creates a feature branch from local `main` while drift type 2 holds, the new branch silently inherits the unpushed work. The eventual PR opens looking clean to the originating session but appears contaminated on GitHub. Resolving it requires force-push surgery during PR review.
 
-This came in as [issue #707](https://github.com/EveryInc/compound-engineering-plugin/issues/707).
+This came in as [issue #707](https://github.com/sigu-svg/compound-engineering-plugin/issues/707).
 
 ## Why post-facto detection is the wrong tool
 

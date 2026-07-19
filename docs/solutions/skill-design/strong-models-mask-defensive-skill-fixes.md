@@ -19,7 +19,7 @@ tags:
   - model-capability
   - confound-control
   - ce-commit-push-pr
-related_pr: https://github.com/EveryInc/compound-engineering-plugin/pull/1088
+related_pr: https://github.com/sigu-svg/compound-engineering-plugin/pull/1088
 ---
 
 ## Context

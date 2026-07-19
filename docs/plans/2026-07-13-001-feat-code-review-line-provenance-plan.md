@@ -6,7 +6,7 @@ artifact_readiness: implementation-ready
 execution: code
 product_contract_source: ce-plan-bootstrap
 plan_type: feat
-origin: "https://github.com/EveryInc/compound-engineering-plugin/issues/883"
+origin: "https://github.com/sigu-svg/compound-engineering-plugin/issues/883"
 ---
 
 # feat: Surface load-bearing line provenance in ce-code-review findings
@@ -14,7 +14,7 @@ origin: "https://github.com/EveryInc/compound-engineering-plugin/issues/883"
 ## Goal Capsule
 
 - **Objective:** When a `ce-code-review` finding's judgment depends on line history (pre-existing vs this-diff, intentional design, or P0/P1 confidence), include concise git provenance in finding evidence so humans and downstream agents see who/when/why without a terminal context switch.
-- **Authority:** Reframed [#883](https://github.com/EveryInc/compound-engineering-plugin/issues/883); product scope confirmed in session (no new skill, no `--blame` flag, free-form evidence only when history is load-bearing).
+- **Authority:** Reframed [#883](https://github.com/sigu-svg/compound-engineering-plugin/issues/883); product scope confirmed in session (no new skill, no `--blame` flag, free-form evidence only when history is load-bearing).
 - **Execution profile:** Skill-prose + schema description + soft contract pins; behavioral proof via `skill-creator` evals; mechanical pins via `bun test`.
 - **Stop conditions:** Stop if the change would require a new skill, a CLI-shaped flag, a new findings-schema property, or always-on / full-file blame dumps — those are out of scope.
 
@@ -63,7 +63,7 @@ Reviewers already may run `git blame` / `git log` for pre-existing checks and in
 
 ### Sources / Research
 
-- Issue [#883](https://github.com/EveryInc/compound-engineering-plugin/issues/883) (reframed)
+- Issue [#883](https://github.com/sigu-svg/compound-engineering-plugin/issues/883) (reframed)
 - `skills/ce-code-review/references/subagent-template.md`, `validator-template.md`, `findings-schema.json`, `SKILL.md`, `review-output-template.md`, `diff-scope.md`
 - `docs/solutions/skill-design/portable-agent-skill-authoring.md` — conditional evidence protocol earns admission; unconditional always-blame does not
 - `docs/solutions/skill-design/confidence-anchored-scoring.md` — free-form evidence over dead schema fields; Stage 5b "introduced by THIS diff" is the consumer of blame

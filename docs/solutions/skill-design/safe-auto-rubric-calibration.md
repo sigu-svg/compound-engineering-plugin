@@ -15,7 +15,7 @@ tags:
   - eval
   - eval-methodology
   - variance
-related_issue: EveryInc/compound-engineering-plugin#686
+related_issue: sigu-svg/compound-engineering-plugin#686
 related_pr: "PR #685 (suggested_fix push that this builds on)"
 ---
 

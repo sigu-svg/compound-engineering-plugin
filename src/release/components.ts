@@ -164,7 +164,8 @@ export function applyOverride(
 export function bumpVersion(version: string, bump: BumpLevel | null): string | null {
   if (!bump) return null
 
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version)
+  // Accept an optional semver prerelease tag (e.g. 3.19.0-simpa.1); bumping drops it.
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?$/.exec(version)
   if (!match) {
     throw new Error(`Unsupported version format: ${version}`)
   }

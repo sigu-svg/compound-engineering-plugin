@@ -681,7 +681,7 @@ Final polish pass. The headless envelope extension itself lands earlier (in Unit
 ## Sources & References
 
 - **Origin document:** `docs/brainstorms/2026-04-18-ce-doc-review-autofix-and-interaction-requirements.md`
-- **Pattern source (ce-code-review PR #590):** https://github.com/EveryInc/compound-engineering-plugin/pull/590
+- **Pattern source (ce-code-review PR #590):** https://github.com/sigu-svg/compound-engineering-plugin/pull/590
 - Related code:
   - `plugins/compound-engineering/skills/ce-code-review/references/walkthrough.md`
   - `plugins/compound-engineering/skills/ce-code-review/references/bulk-preview.md`

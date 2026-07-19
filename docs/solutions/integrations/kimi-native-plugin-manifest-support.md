@@ -28,7 +28,7 @@ tags:
 
 Kimi Code support can look like a normal new target provider at first: add `--to kimi`, write a converter, and emit a Kimi-specific output tree. That is the wrong first move when the platform already has a native plugin manifest and custom marketplace contract.
 
-This came up when [PR #997](https://github.com/EveryInc/compound-engineering-plugin/pull/997) by [@mastepanoski](https://github.com/mastepanoski) proposed Kimi support as a converter target. The useful signal was the demand for Kimi support; the implementation shape duplicated a native install surface.
+This came up when [PR #997](https://github.com/sigu-svg/compound-engineering-plugin/pull/997) by [@mastepanoski](https://github.com/mastepanoski) proposed Kimi support as a converter target. The useful signal was the demand for Kimi support; the implementation shape duplicated a native install surface.
 
 ## Decision
 
@@ -88,5 +88,5 @@ Those are signs the platform support belongs in native metadata and release vali
 - [Native plugin install strategy](./native-plugin-install-strategy.md)
 - [Plugin versioning requirements](../plugin-versioning-requirements.md)
 - [Adding converter target providers](../adding-converter-target-providers.md)
-- [PR #997: original Kimi support proposal](https://github.com/EveryInc/compound-engineering-plugin/pull/997)
-- [PR #998: native Kimi plugin support](https://github.com/EveryInc/compound-engineering-plugin/pull/998)
+- [PR #997: original Kimi support proposal](https://github.com/sigu-svg/compound-engineering-plugin/pull/997)
+- [PR #998: native Kimi plugin support](https://github.com/sigu-svg/compound-engineering-plugin/pull/998)

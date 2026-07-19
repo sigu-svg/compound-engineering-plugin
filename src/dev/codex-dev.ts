@@ -85,7 +85,7 @@ export interface CodexDevStatus {
 
 const OFFICIAL_PLUGIN_ID = "compound-engineering@compound-engineering-plugin"
 const OFFICIAL_MARKETPLACE = "compound-engineering-plugin"
-const OFFICIAL_REPOSITORY = "https://github.com/EveryInc/compound-engineering-plugin"
+const OFFICIAL_REPOSITORY = "https://github.com/sigu-svg/compound-engineering-plugin"
 
 function trim(result: CommandResult): string {
   return result.stdout.trim()
@@ -550,7 +550,7 @@ async function ensureOfficialMarketplace(context: CodexDevContext, runner: Comma
       "plugin",
       "marketplace",
       "add",
-      "EveryInc/compound-engineering-plugin",
+      "sigu-svg/compound-engineering-plugin",
       "--json",
     ])
   } else if (

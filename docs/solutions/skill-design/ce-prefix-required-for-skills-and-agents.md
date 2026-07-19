@@ -19,7 +19,7 @@ tags:
   - plugin-conventions
 related:
   - docs/solutions/skill-design/beta-skills-framework.md
-related_pr: https://github.com/EveryInc/compound-engineering-plugin/pull/747
+related_pr: https://github.com/sigu-svg/compound-engineering-plugin/pull/747
 ---
 
 ## Problem

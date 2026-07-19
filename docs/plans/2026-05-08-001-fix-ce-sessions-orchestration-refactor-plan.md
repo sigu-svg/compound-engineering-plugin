@@ -473,7 +473,7 @@ The bug is structurally gone because no subagent ever invokes the Skill tool. Ev
 
 ## Sources & References
 
-- **Origin issue**: [EveryInc/compound-engineering-plugin#794](https://github.com/EveryInc/compound-engineering-plugin/issues/794) — `ce-session-historian` deadlocks under Claude Code: subagent cannot invoke `Skill(ce-session-inventory)`.
+- **Origin issue**: [sigu-svg/compound-engineering-plugin#794](https://github.com/sigu-svg/compound-engineering-plugin/issues/794) — `ce-session-historian` deadlocks under Claude Code: subagent cannot invoke `Skill(ce-session-inventory)`.
 - **Upstream tracker**: [anthropics/claude-code#38719](https://github.com/anthropics/claude-code/issues/38719) — Allow subagents to invoke skills for parallel workflow execution (closed; architectural limit current).
 - **Institutional learnings**:
   - `docs/solutions/skill-design/pass-paths-not-content-to-subagents.md`

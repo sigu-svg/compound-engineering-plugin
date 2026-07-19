@@ -463,7 +463,7 @@ Land atomically after Phase A is validated.
 ## Sources & References
 
 - **Origin document:** `docs/brainstorms/2026-04-24-surface-scope-earlier-requirements.md`
-- **Related issue:** [GitHub Issue #676](https://github.com/EveryInc/compound-engineering-plugin/issues/676)
+- **Related issue:** [GitHub Issue #676](https://github.com/sigu-svg/compound-engineering-plugin/issues/676)
 - **Skill files modified:**
   - `plugins/compound-engineering/skills/ce-brainstorm/SKILL.md`
   - `plugins/compound-engineering/skills/ce-brainstorm/references/requirements-capture.md`

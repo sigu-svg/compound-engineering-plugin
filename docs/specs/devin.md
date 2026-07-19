@@ -60,7 +60,7 @@ Degradation is graceful: in Devin, `allowed-tools` is an **auto-approval list, n
 Direct install from GitHub (also accepts any git URL or a local path):
 
 ```bash
-devin plugins install EveryInc/compound-engineering-plugin
+devin plugins install sigu-svg/compound-engineering-plugin
 ```
 
 Management:

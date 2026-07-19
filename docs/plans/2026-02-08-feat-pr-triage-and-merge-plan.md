@@ -48,7 +48,7 @@ Show the diff for each PR, get a go/no-go, then either merge or comment. PRs are
 
 ### PR #108 - Note new repository URL
 - **Author:** akx | **Files:** 5 | docs-only
-- **What:** Updates URLs from `kieranklaassen/compound-engineering-plugin` to `EveryInc/compound-engineering-plugin`
+- **What:** Updates URLs from `kieranklaassen/compound-engineering-plugin` to `sigu-svg/compound-engineering-plugin`
 - **Action:** Review diff → merge
 
 ### PR #113 - docs: add brainstorm command to workflow documentation
@@ -124,5 +124,5 @@ After merging:
 
 ## References
 
-- PR list: https://github.com/EveryInc/compound-engineering-plugin/pulls
-- Issues: https://github.com/EveryInc/compound-engineering-plugin/issues
+- PR list: https://github.com/sigu-svg/compound-engineering-plugin/pulls
+- Issues: https://github.com/sigu-svg/compound-engineering-plugin/issues

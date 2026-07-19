@@ -13,7 +13,7 @@ const COMPOUND_SKILL_PATH = path.join(
 const AGENT_BODY = readFileSync(AGENT_PATH, "utf8")
 const COMPOUND_SKILL_BODY = readFileSync(COMPOUND_SKILL_PATH, "utf8")
 
-// Regression guard for https://github.com/EveryInc/compound-engineering-plugin/issues/794.
+// Regression guard for https://github.com/sigu-svg/compound-engineering-plugin/issues/794.
 //
 // `session-historian.md` runs in subagent context (dispatched by `ce-compound`
 // Phase 1). Claude Code does not permit

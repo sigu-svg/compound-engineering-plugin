@@ -49,7 +49,7 @@ The install strategy follows from that: prefer each harness's native plugin/pack
 | Kimi Code CLI | Native plugin install from this repository using `.kimi-plugin/plugin.json` | No | Kimi can install directly from the GitHub repo and can browse the committed `.kimi-plugin/marketplace.json` custom catalog. |
 | OpenCode | Git-backed OpenCode plugin entry in `opencode.json` | No | `.opencode/plugins/compound-engineering.js` registers the CE skills directory directly. |
 | Pi | Git-backed Pi package install from this repository | No | Root `package.json` exposes `.pi/extensions/compound-engineering.ts` and the CE skills directory. `pi-ask-user` is a recommended companion for richer prompts. |
-| Antigravity CLI | Native plugin install from root `plugin.json` + `skills/`, or bundled `.agy/` entry point | No | `agy plugin install https://github.com/EveryInc/compound-engineering-plugin` for one-command remote install. `.agy/plugin.json` symlinks to the root manifest; `.agy/skills` symlinks to `skills/`. |
+| Antigravity CLI | Native plugin install from root `plugin.json` + `skills/`, or bundled `.agy/` entry point | No | `agy plugin install https://github.com/sigu-svg/compound-engineering-plugin` for one-command remote install. `.agy/plugin.json` symlinks to the root manifest; `.agy/skills` symlinks to `skills/`. |
 | Cline | Native skills install via `.cline/scripts/install-skills.sh` | No | Symlinks invocable CE skills into `~/.cline/skills/` or `.cline/skills/`, skipping manual-only skills (`disable-model-invocation: true`). Enable Skills in the Cline extension settings. |
 
 Kiro is no longer a documented CE install target. Historical converter and cleanup code may remain for regression coverage or old artifact handling, but user-facing install docs should not advertise Kiro.
@@ -62,7 +62,7 @@ Recommended config:
 
 ```json
 {
-  "plugin": ["compound-engineering@git+https://github.com/EveryInc/compound-engineering-plugin.git"]
+  "plugin": ["compound-engineering@git+https://github.com/sigu-svg/compound-engineering-plugin.git"]
 }
 ```
 
@@ -92,7 +92,7 @@ Pi can install packages from git repositories. CE exposes a Pi package through r
 Install:
 
 ```bash
-pi install git:github.com/EveryInc/compound-engineering-plugin
+pi install git:github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Recommended companion:
@@ -117,13 +117,13 @@ Antigravity installs plugins from a local directory or a remote Git URL when the
 Recommended one-command install:
 
 ```bash
-agy plugin install https://github.com/EveryInc/compound-engineering-plugin
+agy plugin install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Local checkout:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 agy plugin install ./compound-engineering-plugin
 ```
 
@@ -138,7 +138,7 @@ Cline discovers skills from `~/.cline/skills/` (global) or `.cline/skills/` (pro
 Recommended global install:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 ./compound-engineering-plugin/.cline/scripts/install-skills.sh --global
 ```
 
@@ -157,13 +157,13 @@ Kimi Code CLI has a native plugin surface, so CE should not maintain a Kimi conv
 Direct install:
 
 ```text
-/plugins install https://github.com/EveryInc/compound-engineering-plugin
+/plugins install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Marketplace install:
 
 ```text
-/plugins marketplace https://raw.githubusercontent.com/EveryInc/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
+/plugins marketplace https://raw.githubusercontent.com/sigu-svg/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
 ```
 
 The Kimi marketplace catalog uses schema version `"2"` and entries with `id` plus `source`. It has no release-owned marketplace version, so release automation bumps only `.kimi-plugin/plugin.json` through the root `compound-engineering` component. `bun run release:validate` enforces Kimi manifest and marketplace parity with the Claude source manifest/catalog.

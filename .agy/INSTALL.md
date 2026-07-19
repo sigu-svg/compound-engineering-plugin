@@ -7,14 +7,14 @@ Antigravity installs CE as a native plugin bundle. The repository root is the pl
 With [Antigravity CLI](https://antigravity.google) installed:
 
 ```bash
-agy plugin install https://github.com/EveryInc/compound-engineering-plugin
+agy plugin install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Verify:
 
 ```bash
 agy plugin list
-agy plugin validate https://github.com/EveryInc/compound-engineering-plugin
+agy plugin validate https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 No clone step is required. `agy` stages the plugin under `~/.gemini/antigravity-cli/plugins/compound-engineering/`.
@@ -24,7 +24,7 @@ No clone step is required. `agy` stages the plugin under `~/.gemini/antigravity-
 Clone first when you need a specific branch, tag, or unpublished changes:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 agy plugin install ./compound-engineering-plugin
 ```
 
@@ -40,11 +40,11 @@ Install from a release tag:
 
 ```bash
 git clone --branch compound-engineering-vX.Y.Z --depth 1 \
-  https://github.com/EveryInc/compound-engineering-plugin.git
+  https://github.com/sigu-svg/compound-engineering-plugin.git
 agy plugin install ./compound-engineering-plugin
 ```
 
-Replace `X.Y.Z` with a tag from the [releases page](https://github.com/EveryInc/compound-engineering-plugin/releases).
+Replace `X.Y.Z` with a tag from the [releases page](https://github.com/sigu-svg/compound-engineering-plugin/releases).
 
 ## Local development
 

@@ -282,7 +282,7 @@ function renderHookHandlers(
 
   // Wrap tool.execute.before handlers in try-catch to prevent a failing hook
   // from crashing parallel tool call batches (causes API 400 errors).
-  // See: https://github.com/EveryInc/compound-engineering-plugin/issues/85
+  // See: https://github.com/sigu-svg/compound-engineering-plugin/issues/85
   const isPreToolUse = event === "tool.execute.before"
   const note = options.note ? `    // ${options.note}\n` : ""
   if (isPreToolUse) {

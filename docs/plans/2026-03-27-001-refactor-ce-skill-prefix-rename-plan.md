@@ -467,7 +467,7 @@ Generic skill names (`setup`, `plan`, `review`) collide when users install multi
 ## Sources & References
 
 - **Origin document:** [docs/brainstorms/2026-03-27-ce-skill-prefix-rename-requirements.md](docs/brainstorms/2026-03-27-ce-skill-prefix-rename-requirements.md)
-- Related issue: [#337](https://github.com/EveryInc/compound-engineering-plugin/issues/337)
+- Related issue: [#337](https://github.com/sigu-svg/compound-engineering-plugin/issues/337)
 - Related learning: `docs/solutions/integrations/colon-namespaced-names-break-windows-paths.md`
 - Related learning: `docs/solutions/codex-skill-prompt-entrypoints.md`
 - Related learning: `docs/solutions/skill-design/beta-skills-framework.md`

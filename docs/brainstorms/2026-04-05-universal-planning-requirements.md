@@ -13,7 +13,7 @@ The structured thinking behind ce:plan — breaking down ambiguity, researching 
 
 **Why a conditional path instead of just softening language:** Softening the self-gating language in SKILL.md would be cheaper and might stop the refusal. But the value of ce:plan for non-software tasks comes from the structured workflow — ambiguity assessment, research orchestration, quality-guided output, and a durable plan file. Without the non-software path, the model would attempt to follow software-specific phases (repo research, implementation units, test scenarios) on a non-software task, producing a worse result than a direct prompt. The conditional path lets non-software tasks benefit from structured thinking without fighting software-specific structure.
 
-See: [GitHub issue #517](https://github.com/EveryInc/compound-engineering-plugin/issues/517)
+See: [GitHub issue #517](https://github.com/sigu-svg/compound-engineering-plugin/issues/517)
 
 ## Requirements
 

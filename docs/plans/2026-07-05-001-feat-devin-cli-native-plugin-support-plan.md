@@ -27,13 +27,13 @@ Devin CLI installs plugins natively from a GitHub repo, a git URL, or a local di
 
 ### Problem Frame
 
-Devin CLI users cannot install Compound Engineering today: `devin plugins install EveryInc/compound-engineering-plugin` fails because the repo ships no `.devin-plugin/plugin.json`. Everything else Devin needs is already in place — it loads `skills/<name>/SKILL.md` natively and parses the skills' Claude-style frontmatter (verified empirically against Devin CLI 3000.1.23, including `disable-model-invocation`). A manifest plus the repo's standard platform-parity plumbing closes the gap. The demand signal is concrete: a Devin CLI user requested the install and verified it end-to-end against a local checkout on 2026-07-05.
+Devin CLI users cannot install Compound Engineering today: `devin plugins install sigu-svg/compound-engineering-plugin` fails because the repo ships no `.devin-plugin/plugin.json`. Everything else Devin needs is already in place — it loads `skills/<name>/SKILL.md` natively and parses the skills' Claude-style frontmatter (verified empirically against Devin CLI 3000.1.23, including `disable-model-invocation`). A manifest plus the repo's standard platform-parity plumbing closes the gap. The demand signal is concrete: a Devin CLI user requested the install and verified it end-to-end against a local checkout on 2026-07-05.
 
 ### Requirements
 
 **Install surface**
 
-- R1. `devin plugins install EveryInc/compound-engineering-plugin` (GitHub) and `devin plugins install <local-checkout>` succeed, registering every skill as a `/compound-engineering:<skill>` slash command.
+- R1. `devin plugins install sigu-svg/compound-engineering-plugin` (GitHub) and `devin plugins install <local-checkout>` succeed, registering every skill as a `/compound-engineering:<skill>` slash command.
 - R2. The committed manifest carries only Devin-documented fields — the metadata subset (`name`, `version`, `description`, `author`, `homepage`, `repository`, `license`, `keywords`) of Devin's 11-field schema, omitting the unused dependency/governance lists — with `name: compound-engineering` and metadata matching the Claude manifest.
 - R3. Skill content is unchanged — no `skills/` file is touched.
 
@@ -143,7 +143,7 @@ flowchart TB
 - **Requirements:** R8
 - **Dependencies:** U1
 - **Files:** `README.md`
-- **Approach:** Add a `### Devin CLI` section after `### Kimi Code CLI` in Install: install from GitHub (`devin plugins install EveryInc/compound-engineering-plugin`), verify (`devin plugins list`, `devin plugins info compound-engineering`), update (`devin plugins update compound-engineering`), and the session-start note (skills load in the next Devin session). Note that a few skills declare Claude-style `allowed-tools` names Devin does not map, so some of their actions prompt for permission instead of auto-running (details in the spec). Add a `**Devin CLI**` entry to Local Development after the Kimi entry: local installs are linked to the checkout, so edits apply on the next session without reinstalling.
+- **Approach:** Add a `### Devin CLI` section after `### Kimi Code CLI` in Install: install from GitHub (`devin plugins install sigu-svg/compound-engineering-plugin`), verify (`devin plugins list`, `devin plugins info compound-engineering`), update (`devin plugins update compound-engineering`), and the session-start note (skills load in the next Devin session). Note that a few skills declare Claude-style `allowed-tools` names Devin does not map, so some of their actions prompt for permission instead of auto-running (details in the spec). Add a `**Devin CLI**` entry to Local Development after the Kimi entry: local installs are linked to the checkout, so edits apply on the next session without reinstalling.
 - **Patterns to follow:** The Kimi Code CLI README section and Local Development entry (native-manifest phrasing, code-fenced commands).
 - **Test scenarios:** Test expectation: none — documentation.
 
@@ -163,7 +163,7 @@ flowchart TB
 - **Requirements:** R10
 - **Dependencies:** U1, U2, U3, U4, U5
 - **Files:** none beyond the units above
-- **Approach:** Single feature branch, one PR against `EveryInc/compound-engineering-plugin` `main` from the contributor's fork, conventional title of the `feat:` class. The PR body summarizes the native-manifest decision, links `docs/specs/devin.md`, and notes what was verified empirically. CI must pass the semantic PR-title check and the `test` status check.
+- **Approach:** Single feature branch, one PR against `sigu-svg/compound-engineering-plugin` `main` from the contributor's fork, conventional title of the `feat:` class. The PR body summarizes the native-manifest decision, links `docs/specs/devin.md`, and notes what was verified empirically. CI must pass the semantic PR-title check and the `test` status check.
 - **Test scenarios:** Test expectation: none — delivery process; verified by CI gates.
 
 ---

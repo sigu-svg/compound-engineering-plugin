@@ -15,7 +15,7 @@ execution: code
 ## Goal Capsule
 
 - **Objective:** Make `ce-proof` teach only Proof’s current web agent HTTP surface (`/v3/document`, `/v3/edit`) and the official `accessToken` / `ownerSecret` ownership model, while keeping compound-engineering’s publish-primary product shell (identity, one-way local-file publish, pull-to-local, upstream handoffs).
-- **Authority:** Confirmed scope from this planning session; Proof’s hosted-agent docs in the local `EveryInc/proof` checkout as the API source of truth (not `proof-sdk`, which lags production). Issue [#876](https://github.com/EveryInc/compound-engineering-plugin/issues/876) supplies the ownerSecret orphan-doc symptom and cleanup gap.
+- **Authority:** Confirmed scope from this planning session; Proof’s hosted-agent docs in the local `EveryInc/proof` checkout as the API source of truth (not `proof-sdk`, which lags production). Issue [#876](https://github.com/sigu-svg/compound-engineering-plugin/issues/876) supplies the ownerSecret orphan-doc symptom and cleanup gap.
 - **Done when:** `skills/ce-proof/SKILL.md` and `docs/skills/ce-proof.md` contain no Local Bridge, `/ops`, `/edit/v2`, `/state`, `/snapshot`, or `baseToken` teaching; create workflow persists both credentials with distinct roles; delete/claim/revocation and “no comment delete” are documented; content-contract tests pin the new surface; unified-plan publish phrases still pass; `bun test` green; PR can close #876.
 
 ## Product Contract
@@ -244,7 +244,7 @@ Product Contract written in this bootstrap (no upstream brainstorm). Confirmed u
 
 ## Sources & Research
 
-- Issue [#876](https://github.com/EveryInc/compound-engineering-plugin/issues/876)
+- Issue [#876](https://github.com/sigu-svg/compound-engineering-plugin/issues/876)
 - Local Proof: `docs/proof.SKILL.md`, `docs/agent-docs.md`, `AGENT_CONTRACT.md` (create/delete/claim/v3)
 - Current CE: `skills/ce-proof/SKILL.md`, `docs/skills/ce-proof.md`
 - Learnings: `docs/solutions/skill-design/portable-agent-skill-authoring.md`, `frontier-model-skill-modernization-methodology.md`, `bundled-script-path-resolution-across-harnesses.md` (agents copy fenced examples), `integrations/opencode-temperature-rejected-by-sonnet5-opus48.md` (API bumps need full consumer audit)

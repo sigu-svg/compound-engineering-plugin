@@ -130,7 +130,7 @@ Add to the "Skill Compliance Checklist" in `plugins/compound-engineering/CLAUDE.
 
 ## Sources & References
 
-- Issue: [#204](https://github.com/EveryInc/compound-engineering-plugin/issues/204)
+- Issue: [#204](https://github.com/sigu-svg/compound-engineering-plugin/issues/204)
 - `plugins/compound-engineering/skills/ce-setup/SKILL.md`
 - `plugins/compound-engineering/skills/create-agent-skills/workflows/create-new-skill.md:22,45`
 - `src/utils/codex-agents.ts:21`

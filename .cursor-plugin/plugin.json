@@ -1,13 +1,13 @@
 {
   "name": "compound-engineering",
   "displayName": "Compound Engineering",
-  "version": "3.19.0",
+  "version": "3.19.0-simpa.1",
   "description": "Brainstorm, plan, debug, review, and compound learnings with AI agents",
   "author": {
     "name": "Kieran Klaassen and Trevin Chow"
   },
   "homepage": "https://every.to/source-code/my-ai-had-already-fixed-the-code-before-i-saw-it",
-  "repository": "https://github.com/EveryInc/compound-engineering-plugin",
+  "repository": "https://github.com/sigu-svg/compound-engineering-plugin",
   "license": "MIT",
   "keywords": [
     "cursor",

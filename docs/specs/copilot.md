@@ -49,14 +49,14 @@ https://docs.github.com/en/copilot/concepts/agents/coding-agent/mcp-and-coding-a
 - Install from a registered marketplace with:
 
 ```text
-/plugin marketplace add EveryInc/compound-engineering-plugin
+/plugin marketplace add sigu-svg/compound-engineering-plugin
 /plugin install compound-engineering@compound-engineering-plugin
 ```
 
 - The terminal equivalents are:
 
 ```bash
-copilot plugin marketplace add EveryInc/compound-engineering-plugin
+copilot plugin marketplace add sigu-svg/compound-engineering-plugin
 copilot plugin install compound-engineering@compound-engineering-plugin
 ```
 

@@ -10,7 +10,7 @@ superseded_by: "2026-06-19-agentless-plugin-surface-reduction"
 
 ## Overview
 
-Add Codex-format plugin manifests (`.agents/plugins/marketplace.json` plus per-plugin `.codex-plugin/plugin.json`) to the repo alongside the existing Claude-format manifests, so Codex users can install CE's skills via the native `codex plugin marketplace add EveryInc/compound-engineering-plugin` flow.
+Add Codex-format plugin manifests (`.agents/plugins/marketplace.json` plus per-plugin `.codex-plugin/plugin.json`) to the repo alongside the existing Claude-format manifests, so Codex users can install CE's skills via the native `codex plugin marketplace add sigu-svg/compound-engineering-plugin` flow.
 
 Superseded note (2026-06-19): this plan records the pre-agentless Codex migration. Compound Engineering no longer ships standalone agents, so the native Codex plugin install is self-contained through skills and skill-local prompt assets. The old converted Codex companion step is obsolete.
 
@@ -52,7 +52,7 @@ Shipping the Codex manifests:
 
 * No Codex-specific skill frontmatter fields (`metadata.priority`, `metadata.pathPatterns`, `metadata.bashPatterns`) — these are trigger-tuning extensions, not required for registration, and can be added per-skill in followups
 
-* No empirical test of remote-repo install in this plan. The remote `codex plugin marketplace add EveryInc/compound-engineering-plugin` flow documented in the README cannot be tested from a feature branch — Codex fetches the default branch of the remote. Remote-install verification is a separate manual step immediately post-merge, before the release tag: clone the merged `main`, run the remote install command against it, confirm skills register. If the remote path fails, ship a fix-forward PR rather than rolling back. `source: { source: "local", path: "./plugins/<name>" }` has been empirically verified as the correct schema for both bundled AND remote-cloned marketplaces (see Resolved Open Questions), so the most likely remote-vs-local divergence — the schema — is already de-risked
+* No empirical test of remote-repo install in this plan. The remote `codex plugin marketplace add sigu-svg/compound-engineering-plugin` flow documented in the README cannot be tested from a feature branch — Codex fetches the default branch of the remote. Remote-install verification is a separate manual step immediately post-merge, before the release tag: clone the merged `main`, run the remote install command against it, confirm skills register. If the remote path fails, ship a fix-forward PR rather than rolling back. `source: { source: "local", path: "./plugins/<name>" }` has been empirically verified as the correct schema for both bundled AND remote-cloned marketplaces (see Resolved Open Questions), so the most likely remote-vs-local divergence — the schema — is already de-risked
 
 ### Deferred to Separate Tasks
 
@@ -452,7 +452,7 @@ Required fields per docs: `name`, `version`, `description`. All others optional.
 
 * Add a new `### Codex` section with:
 
-  * The native install command: `codex plugin marketplace add EveryInc/compound-engineering-plugin` + `codex plugin install compound-engineering`
+  * The native install command: `codex plugin marketplace add sigu-svg/compound-engineering-plugin` + `codex plugin install compound-engineering`
 
   * A brief note that native install is self-contained for CE skills and skill-local prompt assets
 

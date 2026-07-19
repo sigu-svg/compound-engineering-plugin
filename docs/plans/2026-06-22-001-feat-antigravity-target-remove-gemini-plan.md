@@ -263,7 +263,7 @@ assertion that `.agy/plugin.json` parses and `.agy/skills` resolves to `skills/`
 **Dependencies:** U6
 **Files:** `README.md`
 **Approach:** Update the "Antigravity CLI (`agy`)" install section and the local-checkout section to:
-`git clone https://github.com/EveryInc/compound-engineering-plugin` then
+`git clone https://github.com/sigu-svg/compound-engineering-plugin` then
 `agy plugin install ./compound-engineering-plugin/.agy`. Note `agy` reads `GEMINI.md` context. Remove
 the "packaging is rolling out" hedge.
 **Patterns to follow:** existing README per-harness install sections.

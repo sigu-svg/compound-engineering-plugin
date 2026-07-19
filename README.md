@@ -1,6 +1,6 @@
 # Compound Engineering
 
-[![Build Status](https://github.com/EveryInc/compound-engineering-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/EveryInc/compound-engineering-plugin/actions/workflows/ci.yml)
+[![Build Status](https://github.com/sigu-svg/compound-engineering-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/sigu-svg/compound-engineering-plugin/actions/workflows/ci.yml)
 
 AI skills that make each unit of engineering work easier than the last.
 
@@ -9,7 +9,7 @@ AI skills that make each unit of engineering work easier than the last.
 ### Claude Code
 
 ```text
-/plugin marketplace add EveryInc/compound-engineering-plugin
+/plugin marketplace add sigu-svg/compound-engineering-plugin
 /plugin install compound-engineering
 ```
 
@@ -35,7 +35,7 @@ Compound Engineering is not listed in Codex's built-in plugin marketplace yet. A
 
    | Field | Value |
    | --- | --- |
-   | Source | `EveryInc/compound-engineering-plugin` |
+   | Source | `sigu-svg/compound-engineering-plugin` |
    | Git ref | `main` |
    | Sparse paths | leave blank |
 
@@ -51,7 +51,7 @@ Register the marketplace, then install the plugin.
 1. **Register the marketplace with Codex:**
 
    ```bash
-   codex plugin marketplace add EveryInc/compound-engineering-plugin
+   codex plugin marketplace add sigu-svg/compound-engineering-plugin
    ```
 
 2. **Install the plugin:**
@@ -67,7 +67,7 @@ The native Codex plugin install is self-contained for Compound Engineering. Spec
 For a non-default Codex profile, run every Codex-related step against the same `CODEX_HOME`. This example installs CE into a `work` profile:
 
 ```bash
-CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add EveryInc/compound-engineering-plugin
+CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add sigu-svg/compound-engineering-plugin
 CODEX_HOME="$HOME/.codex/profiles/work" codex plugin add compound-engineering@compound-engineering-plugin
 ```
 
@@ -252,13 +252,13 @@ The `compound-engineering` plugin currently ships 31 skills and 0 standalone age
 Kimi Code CLI can install Compound Engineering directly from this repository because the repo ships a native `.kimi-plugin/plugin.json` manifest:
 
 ```text
-/plugins install https://github.com/EveryInc/compound-engineering-plugin
+/plugins install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 You can also browse it through Kimi's custom marketplace flow:
 
 ```text
-/plugins marketplace https://raw.githubusercontent.com/EveryInc/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
+/plugins marketplace https://raw.githubusercontent.com/sigu-svg/compound-engineering-plugin/main/.kimi-plugin/marketplace.json
 ```
 
 After installing or updating, run `/reload` or start a new Kimi session so the plugin skills are loaded.
@@ -268,7 +268,7 @@ After installing or updating, run `/reload` or start a new Kimi session so the p
 Cline loads CE skills from on-demand `SKILL.md` directories. Enable **Settings -> Features -> Enable Skills** in the Cline extension, then link this repository's skills globally or per project:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 ./compound-engineering-plugin/.cline/scripts/install-skills.sh --global
 ```
 
@@ -285,13 +285,13 @@ Start a new Cline task after installing or updating skills. See [`.cline/INSTALL
 xAI's [Grok Build CLI](https://x.ai/cli) (`grok`) installs Compound Engineering directly from this repository — the repo root is a valid Grok plugin (`grok` reads the existing Claude-compatible manifests, and the repo also ships a native `.grok-plugin/plugin.json`):
 
 ```bash
-grok plugin install EveryInc/compound-engineering-plugin
+grok plugin install sigu-svg/compound-engineering-plugin
 ```
 
 This tracks the repository; run `grok plugin update` to pull the latest. To browse it as a marketplace source instead, the repo ships a native `.grok-plugin/marketplace.json`:
 
 ```bash
-grok plugin marketplace add EveryInc/compound-engineering-plugin
+grok plugin marketplace add sigu-svg/compound-engineering-plugin
 grok plugin install compound-engineering
 ```
 
@@ -304,7 +304,7 @@ Compound Engineering is also being submitted to the official [xAI plugin marketp
 Devin CLI can install Compound Engineering directly from GitHub because the repo ships a native `.devin-plugin/plugin.json` manifest:
 
 ```bash
-devin plugins install EveryInc/compound-engineering-plugin
+devin plugins install sigu-svg/compound-engineering-plugin
 ```
 
 Verify the install and inspect the skills:
@@ -323,7 +323,7 @@ A few skills declare Claude-style `allowed-tools` names that Devin does not map 
 For **VS Code Copilot Agent Plugins**:
 
 1. Run `Chat: Install Plugin from Source` from the VS Code command palette
-2. Use `EveryInc/compound-engineering-plugin` for the repo
+2. Use `sigu-svg/compound-engineering-plugin` for the repo
 3. Select `compound-engineering` when VS Code shows the plugins in this repository
 
 For **Copilot CLI**, use:
@@ -331,14 +331,14 @@ For **Copilot CLI**, use:
 Inside Copilot CLI:
 
 ```text
-/plugin marketplace add EveryInc/compound-engineering-plugin
+/plugin marketplace add sigu-svg/compound-engineering-plugin
 /plugin install compound-engineering@compound-engineering-plugin
 ```
 
 From a shell with the `copilot` binary:
 
 ```bash
-copilot plugin marketplace add EveryInc/compound-engineering-plugin
+copilot plugin marketplace add sigu-svg/compound-engineering-plugin
 copilot plugin install compound-engineering@compound-engineering-plugin
 ```
 
@@ -349,7 +349,7 @@ Copilot CLI reads the existing Claude-compatible plugin manifests, so no separat
 From a shell with the `droid` binary:
 
 ```bash
-droid plugin marketplace add https://github.com/EveryInc/compound-engineering-plugin
+droid plugin marketplace add https://github.com/sigu-svg/compound-engineering-plugin
 droid plugin install compound-engineering@compound-engineering-plugin
 ```
 
@@ -358,7 +358,7 @@ Droid uses `plugin@marketplace` plugin IDs; here `compound-engineering` is the p
 ### Qwen Code
 
 ```bash
-qwen extensions install EveryInc/compound-engineering-plugin:compound-engineering
+qwen extensions install sigu-svg/compound-engineering-plugin:compound-engineering
 ```
 
 Qwen Code installs Claude Code-compatible plugins directly from GitHub and converts the plugin format during install, so no Bun install step is needed.
@@ -369,7 +369,7 @@ Add Compound Engineering to the `plugin` array in your global or project `openco
 
 ```json
 {
-  "plugin": ["compound-engineering@git+https://github.com/EveryInc/compound-engineering-plugin.git"]
+  "plugin": ["compound-engineering@git+https://github.com/sigu-svg/compound-engineering-plugin.git"]
 }
 ```
 
@@ -380,7 +380,7 @@ Restart OpenCode after changing the config. The OpenCode plugin registers the Co
 Install Compound Engineering as a Pi package from this repository:
 
 ```bash
-pi install git:github.com/EveryInc/compound-engineering-plugin
+pi install git:github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Required companion for CE workflows that dispatch reviewer, research, or implementation subagents:
@@ -400,7 +400,7 @@ pi install npm:pi-ask-user
 Google has replaced the consumer Gemini CLI with [Antigravity CLI](https://antigravity.google) (`agy`), which still runs on Gemini models. Install Compound Engineering directly from GitHub — no clone step required:
 
 ```bash
-agy plugin install https://github.com/EveryInc/compound-engineering-plugin
+agy plugin install https://github.com/sigu-svg/compound-engineering-plugin
 ```
 
 Verify with `agy plugin list`. The repository root is the plugin package (`plugin.json` plus `skills/`).
@@ -408,7 +408,7 @@ Verify with `agy plugin list`. The repository root is the plugin package (`plugi
 For a local checkout or pinned release:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin
+git clone https://github.com/sigu-svg/compound-engineering-plugin
 agy plugin install ./compound-engineering-plugin
 ```
 
@@ -438,14 +438,14 @@ There is no `codex plugin update`; re-running `add` reinstalls from the refreshe
 
 **Codex App**
 
-Refresh the marketplace from the **Plugins** panel (remove and re-add the `EveryInc/compound-engineering-plugin` marketplace if there is no refresh control), then reinstall **compound-engineering** and restart Codex.
+Refresh the marketplace from the **Plugins** panel (remove and re-add the `sigu-svg/compound-engineering-plugin` marketplace if there is no refresh control), then reinstall **compound-engineering** and restart Codex.
 
 If you configured a host with a direct path or sparse path under `plugins/compound-engineering`, edit or reinstall that source so it points at the repository root with no sparse path.
 
 If a previous Bun-installed copy is still shadowing native plugin skills, run the current cleanup command from a checkout of this repository:
 
 ```bash
-git clone https://github.com/EveryInc/compound-engineering-plugin.git /tmp/compound-engineering-plugin-cleanup
+git clone https://github.com/sigu-svg/compound-engineering-plugin.git /tmp/compound-engineering-plugin-cleanup
 cd /tmp/compound-engineering-plugin-cleanup
 bun install
 bun run cleanup --target all

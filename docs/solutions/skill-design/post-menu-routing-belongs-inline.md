@@ -17,7 +17,7 @@ tags:
   - ce-plan
   - extraction-rule
   - load-bearing-rules
-related_issue: https://github.com/EveryInc/compound-engineering-plugin/issues/714
+related_issue: https://github.com/sigu-svg/compound-engineering-plugin/issues/714
 ---
 
 ## Problem

@@ -370,7 +370,7 @@ This is the **conditionality design rule** the PR also introduces.
 
 ## Sources & References
 
-- **PR #629 (upstream change being completed):** https://github.com/EveryInc/compound-engineering-plugin/pull/629
+- **PR #629 (upstream change being completed):** https://github.com/sigu-svg/compound-engineering-plugin/pull/629
 - Related code:
   - `plugins/compound-engineering/skills/ce-plan/SKILL.md`
   - `plugins/compound-engineering/skills/ce-plan/references/deepening-workflow.md`

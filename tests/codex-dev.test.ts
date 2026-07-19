@@ -82,7 +82,7 @@ const officialMarketplace = {
   root: "/tmp/compound-engineering-plugin",
   marketplaceSource: {
     sourceType: "git",
-    source: "https://github.com/EveryInc/compound-engineering-plugin.git",
+    source: "https://github.com/sigu-svg/compound-engineering-plugin.git",
   },
 }
 
@@ -95,10 +95,10 @@ function plugin(pluginId: string, options: Partial<InstalledPlugin> = {}): Insta
     version: "3.19.0",
     installed: true,
     enabled: true,
-    source: { source: "git", url: "https://github.com/EveryInc/compound-engineering-plugin.git" },
+    source: { source: "git", url: "https://github.com/sigu-svg/compound-engineering-plugin.git" },
     marketplaceSource: {
       sourceType: "git",
-      source: "https://github.com/EveryInc/compound-engineering-plugin.git",
+      source: "https://github.com/sigu-svg/compound-engineering-plugin.git",
     },
     ...options,
   }
@@ -135,7 +135,7 @@ class StatefulCodexRunner implements CommandRunner {
       this.plugins = this.plugins.filter((entry) => entry.pluginId !== args[2])
       return { exitCode: 0, stdout: "{}", stderr: "" }
     }
-    if (joined === "plugin marketplace add EveryInc/compound-engineering-plugin --json") {
+    if (joined === "plugin marketplace add sigu-svg/compound-engineering-plugin --json") {
       this.marketplaces.push(officialMarketplace)
       return { exitCode: 0, stdout: "{}", stderr: "" }
     }

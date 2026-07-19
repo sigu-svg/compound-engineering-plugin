@@ -15,7 +15,7 @@ The surface suggestion (a mode or flag) is the wrong fix. **Scope under-visibili
 
 The fix lives in templates and phase additions — no new mode, no flag, no user-facing classification question. Scope tiers stay as-is.
 
-Related: [GitHub Issue #676](https://github.com/EveryInc/compound-engineering-plugin/issues/676)
+Related: [GitHub Issue #676](https://github.com/sigu-svg/compound-engineering-plugin/issues/676)
 
 ---
 

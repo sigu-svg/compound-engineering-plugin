@@ -14,7 +14,7 @@ root_cause: config_error
 resolution_type: code_fix
 severity: high
 related_issues:
-  - "https://github.com/EveryInc/compound-engineering-plugin/issues/366"
+  - "https://github.com/sigu-svg/compound-engineering-plugin/issues/366"
 related_components:
   - targets
   - sync

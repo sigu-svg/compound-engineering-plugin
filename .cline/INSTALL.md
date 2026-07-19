@@ -37,11 +37,11 @@ Clone the tag you want, then run the install script against that checkout:
 
 ```bash
 git clone --branch compound-engineering-vX.Y.Z --depth 1 \
-  https://github.com/EveryInc/compound-engineering-plugin.git
+  https://github.com/sigu-svg/compound-engineering-plugin.git
 ./compound-engineering-plugin/.cline/scripts/install-skills.sh --global
 ```
 
-Replace `X.Y.Z` with a tag from the [releases page](https://github.com/EveryInc/compound-engineering-plugin/releases).
+Replace `X.Y.Z` with a tag from the [releases page](https://github.com/sigu-svg/compound-engineering-plugin/releases).
 
 ## Local development
 

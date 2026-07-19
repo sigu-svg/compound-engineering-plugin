@@ -7,7 +7,7 @@ topic: ce-release-notes-skill
 
 ## Problem Frame
 
-The `compound-engineering` plugin ships frequently — often multiple releases per week. Users who install the plugin via the marketplace can't easily keep up with what's changed: skill renames, new behaviors, retired commands, or relevant fixes. The release history exists publicly on GitHub (release-please-generated GitHub Releases at `EveryInc/compound-engineering-plugin`), but scrolling through release pages to answer "what happened to the deepen-plan skill?" is friction users won't bother with.
+The `compound-engineering` plugin ships frequently — often multiple releases per week. Users who install the plugin via the marketplace can't easily keep up with what's changed: skill renames, new behaviors, retired commands, or relevant fixes. The release history exists publicly on GitHub (release-please-generated GitHub Releases at `sigu-svg/compound-engineering-plugin`), but scrolling through release pages to answer "what happened to the deepen-plan skill?" is friction users won't bother with.
 
 This skill provides a conversational interface over the plugin's GitHub Releases so a user can ask either "what's new?" or a specific question and get a grounded, version-cited answer without leaving Claude Code.
 
@@ -22,7 +22,7 @@ This skill provides a conversational interface over the plugin's GitHub Releases
 - R4. **v1 is slash-only invocation.** The SKILL.md frontmatter sets `disable-model-invocation: true` so the skill only fires when the user explicitly types `/ce:release-notes`. Auto-invocation is deferred to a possible v2 once dogfooding shows users clearly want conversational triggering and a tested gating description has been validated against a prompt corpus.
 
 **Data Source**
-- R5. Source of truth is the GitHub Releases API for `EveryInc/compound-engineering-plugin`. **Layered access strategy:** prefer the `gh` CLI when available (authenticated, consistent JSON output, better error messages, higher rate limits). Fall back to anonymous HTTPS against `https://api.github.com/repos/EveryInc/compound-engineering-plugin/releases` (or the equivalent paginated endpoint) when `gh` is missing or unauthenticated. The repo is public, so anonymous reads work and the 60 req/hr-per-IP unauth'd limit is more than enough for this skill's invocation frequency.
+- R5. Source of truth is the GitHub Releases API for `sigu-svg/compound-engineering-plugin`. **Layered access strategy:** prefer the `gh` CLI when available (authenticated, consistent JSON output, better error messages, higher rate limits). Fall back to anonymous HTTPS against `https://api.github.com/repos/sigu-svg/compound-engineering-plugin/releases` (or the equivalent paginated endpoint) when `gh` is missing or unauthenticated. The repo is public, so anonymous reads work and the 60 req/hr-per-IP unauth'd limit is more than enough for this skill's invocation frequency.
 - R6. Only releases tagged with the `compound-engineering-v*` prefix are considered. Sibling tags (`cli-v*`, `coding-tutor-v*`, `marketplace-v*`, `cursor-marketplace-v*`) are filtered out, even though `cli` and `compound-engineering` share version numbers via release-please's `linked-versions` plugin.
 - R7. No local caching, no fallback to `CHANGELOG.md` files. Always fetch live.
 - R8. Skill must fail gracefully with an actionable message when **both** access paths fail (e.g., no network, GitHub API outage, rate-limit exhaustion on the anonymous fallback). Missing `gh` alone is not a failure — the skill silently uses the anonymous fallback.
@@ -61,7 +61,7 @@ This skill provides a conversational interface over the plugin's GitHub Releases
 ## Dependencies / Assumptions
 - Users have **either** the `gh` CLI (preferred path) **or** outbound HTTPS access to `api.github.com` (anonymous fallback path). Per R5, missing `gh` alone is not a failure.
 - The 60 req/hr anonymous limit is per source IP, not per user. Users on shared NAT egress (corporate networks, VPN exit nodes) could in principle exhaust the budget collectively even at low individual usage. We accept this as low-likelihood given the skill's invocation pattern; if it surfaces in practice, encourage `gh auth login` rather than adding caching.
-- The repo `EveryInc/compound-engineering-plugin` remains the canonical source. (If the plugin moves repos, the hardcoded repo reference in the skill must be updated.)
+- The repo `sigu-svg/compound-engineering-plugin` remains the canonical source. (If the plugin moves repos, the hardcoded repo reference in the skill must be updated.)
 - Release-please continues to use the `compound-engineering-v*` tag prefix and the conventional-commit-grouped release body format. A change to release-please configuration could break R6 or R10.
 
 ## Outstanding Questions
@@ -72,7 +72,7 @@ This skill provides a conversational interface over the plugin's GitHub Releases
 - [Affects R5][Technical] Implementation choice for the anonymous fallback: shell out to `curl` + `jq`, or use a different HTTP client. Decide based on cross-platform portability requirements (note: AGENTS.md "Platform-Specific Variables in Skills" rules apply since this skill will be converted for Codex/Gemini/OpenCode).
 - [Affects R13, R14][Technical] Define the "confident match" criterion that gates R13 (direct narrative answer) vs. R14 (say-so-plainly). Options include keyword/substring match against release bodies, semantic match via embedding, or LLM judgment with an explicit confidence prompt. Decide during planning based on cost and accuracy tradeoffs.
 - [Affects R4][Needs research] If/when v2 auto-invoke is reconsidered, define the actual gate. Since v1 has no auto-invoke surface to observe, "dogfooding shows users want it" is unfalsifiable as written — the v2 trigger needs a concrete source of evidence (explicit user requests, opt-in beta flag with telemetry, or a stated time-box for revisiting).
-- [Affects R5][Technical] Should the repo reference (`EveryInc/compound-engineering-plugin`) be hardcoded in the skill, or derived from `.claude-plugin/plugin.json` (`homepage`/`repository` field) for portability? Hardcoding is simpler; derivation survives a future repo move without skill edits. Decide based on portability vs. complexity tradeoff during planning.
+- [Affects R5][Technical] Should the repo reference (`sigu-svg/compound-engineering-plugin`) be hardcoded in the skill, or derived from `.claude-plugin/plugin.json` (`homepage`/`repository` field) for portability? Hardcoding is simpler; derivation survives a future repo move without skill edits. Decide based on portability vs. complexity tradeoff during planning.
 - [Affects R10][Technical] Release-please body format drift handling: R10 assumes the `Features`/`Bug Fixes` markdown grouping. Decide whether to (a) accept silent degradation if release-please config changes, (b) parse defensively and fall back to raw rendering, or (c) detect drift and surface a warning. Low priority — release-please config has been stable.
 
 ## Next Steps

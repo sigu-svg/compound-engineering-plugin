@@ -28,7 +28,7 @@ const ISSUE_CREATION_START = HANDOFF_BODY.indexOf("## Issue Creation")
 const ISSUE_CREATION_SECTION =
   ISSUE_CREATION_START > -1 ? HANDOFF_BODY.slice(ISSUE_CREATION_START) : ""
 
-// Regression guard for https://github.com/EveryInc/compound-engineering-plugin/issues/714.
+// Regression guard for https://github.com/sigu-svg/compound-engineering-plugin/issues/714.
 //
 // ce-plan Phase 5.4 presents a 4-option post-generation menu. Because SKILL.md
 // content caches at session start while reference files load on demand, the
@@ -88,7 +88,7 @@ describe("ce-plan post-generation menu routing", () => {
       const found = inlineRoutingPattern.test(phaseRegion)
       expect(
         found,
-        `ce-plan SKILL.md Phase 5.4 is missing inline routing for menu option "${name}". The bare per-option action MUST live in SKILL.md (not solely in references/plan-handoff.md) so an agent that doesn't load the reference still routes correctly. See https://github.com/EveryInc/compound-engineering-plugin/issues/714 and docs/solutions/skill-design/post-menu-routing-belongs-inline-2026-04-28.md.`,
+        `ce-plan SKILL.md Phase 5.4 is missing inline routing for menu option "${name}". The bare per-option action MUST live in SKILL.md (not solely in references/plan-handoff.md) so an agent that doesn't load the reference still routes correctly. See https://github.com/sigu-svg/compound-engineering-plugin/issues/714 and docs/solutions/skill-design/post-menu-routing-belongs-inline-2026-04-28.md.`,
       ).toBe(true)
     }
   })

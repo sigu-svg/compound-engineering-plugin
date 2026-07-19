@@ -286,5 +286,5 @@ Users reach for `/ce:plan` for any multi-step planning — trip itineraries, stu
 
 - **Origin document:** `docs/brainstorms/2026-04-05-universal-planning-requirements.md`
 - Related code: `plugins/compound-engineering/skills/ce-plan/SKILL.md`, `plugins/compound-engineering/skills/ce-brainstorm/SKILL.md`, `plugins/compound-engineering/skills/lfg/SKILL.md`, `plugins/compound-engineering/skills/slfg/SKILL.md`
-- Related issue: [#517](https://github.com/EveryInc/compound-engineering-plugin/issues/517)
+- Related issue: [#517](https://github.com/sigu-svg/compound-engineering-plugin/issues/517)
 - Related learnings: `docs/solutions/skill-design/beta-skills-framework.md`, `docs/solutions/skill-design/compound-refresh-skill-improvements.md`, `docs/solutions/skill-design/git-workflow-skills-need-explicit-state-machines.md`

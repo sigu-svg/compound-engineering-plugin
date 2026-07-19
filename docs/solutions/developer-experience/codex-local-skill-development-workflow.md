@@ -173,4 +173,4 @@ cursor-agent --plugin-dir "$PWD"
 - [Codex skill prompt entrypoints](../codex-skill-prompt-entrypoints.md) explains how installed Codex skills are invoked.
 - [Plugin versioning requirements](../plugin-versioning-requirements.md) explains why local development must not depend on hand-bumping the release-owned manifest version.
 - [Preserve user content across destructive paths](../best-practices/preserve-user-content-across-all-destructive-paths.md) supplies the safety precedent for managing only an exact owned symlink.
-- [GitHub issue #1048](https://github.com/EveryInc/compound-engineering-plugin/issues/1048) records an adjacent user-state preservation failure that reinforces the same ownership boundary.
+- [GitHub issue #1048](https://github.com/sigu-svg/compound-engineering-plugin/issues/1048) records an adjacent user-state preservation failure that reinforces the same ownership boundary.
