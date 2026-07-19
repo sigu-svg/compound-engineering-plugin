@@ -1,12 +1,12 @@
 ---
 name: ce-doc-review
 description: Review requirements, plans, or specs with role-specific lenses. Use when the user wants to improve an existing planning document.
-argument-hint: "[mode:headless] [path/to/document.md]"
+argument-hint: "[mode:headless] [mode:report] [path/to/document.md]"
 ---
 
 # Document Review
 
-Review requirements or plan documents through multi-persona analysis. Dispatches generic subagents seeded with skill-local reviewer prompt assets, auto-applies `safe_auto` fixes, and routes remaining findings through a four-option interaction (per-finding walk-through, auto-resolve with best judgment, Append-to-Open-Questions, Report-only) for user decision.
+Review requirements or plan documents through multi-persona analysis. Dispatches generic subagents seeded with skill-local reviewer prompt assets, auto-applies `safe_auto` fixes (unless report-only mode is set), and routes remaining findings through a four-option interaction (per-finding walk-through, auto-resolve with best judgment, Append-to-Open-Questions, Report-only) for user decision.
 
 ## Interactive mode rules
 
@@ -15,13 +15,15 @@ Review requirements or plan documents through multi-persona analysis. Dispatches
 
 ## Phase 0: Detect Mode
 
-Check the invocation arguments for `mode:headless`. Arguments may contain a document path, `mode:headless`, or both. Tokens starting with `mode:` are flags, not file paths — strip them from the arguments and use the remaining token (if any) as the document path for Phase 1.
+Check the invocation arguments for `mode:headless` and `mode:report`. Arguments may contain a document path and any combination of mode tokens. Tokens starting with `mode:` are flags, not file paths — strip them from the arguments and use the remaining token (if any) as the document path for Phase 1.
 
 If `mode:headless` is present, set **headless mode** for the rest of the workflow.
 
+If `mode:report` is present, set **report-only mode** for the rest of the workflow. **Report-only mode never edits the reviewed document — or any other file.** Every apply path is disabled for the whole run: `safe_auto` findings are NOT applied (they are reported with their `suggested_fix` as proposed edits), `gated_auto`/`manual`/FYI findings are reported as usual, and no interactive apply/walk-through routing is offered. `mode:report` composes with `mode:headless` (structured report, no prompts) and takes precedence over every apply instruction elsewhere in this skill and its references — including `safe_auto` silent-apply rules in the walkthrough, synthesis, and headless sections. Use it for frozen, immutable, or otherwise write-protected documents, and whenever the caller must guarantee the review has zero side effects.
+
 **Headless mode** changes the interaction model, not the classification boundaries. Apply the same judgment about which tier each finding belongs in. Only the delivery of non-`safe_auto` findings changes:
 
-- `safe_auto` fixes are applied silently (same as interactive)
+- `safe_auto` fixes are applied silently (same as interactive) — unless report-only mode is set, in which case they are reported, never applied
 - `gated_auto`, `manual`, and FYI findings are returned as structured text for the caller to handle — no blocking-question prompts, no interactive routing
 - Phase 5 returns immediately with "Review complete" (no routing question, no terminal question)
 

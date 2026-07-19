@@ -217,7 +217,7 @@ Findings reaching 3.7 have already been gated to anchors `50`, `75`, or `100` by
 
 | Anchor | Autofix Class | Route |
 |--------|---------------|-------|
-| `100`  | `safe_auto`   | Apply silently in Phase 4. Requires `suggested_fix`. Demote to `gated_auto` if missing. |
+| `100`  | `safe_auto`   | Apply silently in Phase 4 (in report-only mode: never apply — report with `suggested_fix`). Requires `suggested_fix`. Demote to `gated_auto` if missing. |
 | `100`  | `gated_auto`  | Enter the per-finding walk-through with Apply marked (recommended). Requires `suggested_fix`. Demote to `manual` if missing. |
 | `100`  | `manual`      | Enter the per-finding walk-through with user-judgment framing. `suggested_fix` is optional. |
 | `75`   | `safe_auto`   | Demote to `gated_auto` before routing — silent apply is reserved for anchor `100` findings where evidence directly confirms the fix. Enter the walk-through with Apply marked (recommended). |
