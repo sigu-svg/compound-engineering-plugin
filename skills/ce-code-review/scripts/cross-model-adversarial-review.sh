@@ -77,7 +77,7 @@ M_COMPOSER="composer-2.5-fast" # cursor-agent composer (no high tier; -fast is t
 
 route_effort() {
   case "$1" in
-    codex) printf 'medium' ;;
+    codex) printf 'high' ;;
     claude|grok-cli) printf 'high' ;;
     grok-cursor) printf 'model-implied-high' ;;
     composer) printf 'fast' ;;
