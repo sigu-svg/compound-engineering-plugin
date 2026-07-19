@@ -49,9 +49,9 @@ Sub-agent dispatch is tiered by task shape, never hardcoded to a model name:
 
 - **Extraction tier** — evidence scouts and other retrieval/quoting work. Use the platform's cheapest capable model when the current harness exposes a known override. "Capable" is part of the spec — escalate to the generation tier when the repo is large or the stack obscure.
 - **Generation tier** — evidence-driven ideation frames and basis verification. Use the platform's mid-tier model when the current harness exposes a known override. If model names are unknown, omit the override and inherit rather than guessing.
-- **Ceiling tier** — ceiling ideation frames, cross-cutting synthesis, and final arbitration. Inherit the orchestrator's model by omitting the model parameter.
+- **Ceiling tier** — ceiling ideation frames, cross-cutting synthesis, and final arbitration. Inherit the orchestrator's model by omitting the model parameter. **Restricted-orchestrator exception:** when the installation's own instructions declare the session model orchestration-only (never to run as a subagent), never inherit it — use an explicit override (the installation's strongest allowed subagent tier for judgment roles, its mid-tier for mechanical roles), or fail closed to inline work in the orchestrator.
 
-**Degradation rule.** When the platform's subagent primitive does not support per-agent model selection, dispatch everything on the inherited model and keep the read budgets and dossier caps — cost control then comes from structure, not tiering.
+**Degradation rule.** When the platform's subagent primitive does not support per-agent model selection, dispatch everything on the inherited model and keep the read budgets and dossier caps — cost control then comes from structure, not tiering. The restricted-orchestrator exception above still applies: with such a session model, do the work inline instead of dispatching.
 
 Two overrides raise the whole ideation fleet to the ceiling tier: surprise-me mode (subject discovery is judgment-heavy and is the mode's whole value) and the `go deep` depth override (Phase 0.5).
 

@@ -199,7 +199,7 @@ For a **new PR body**, append the following block after a `---` rule only when t
 ```markdown
 ---
 
-[![Compound Engineering](https://img.shields.io/badge/Built_with-Compound_Engineering-6366f1)](https://github.com/EveryInc/compound-engineering-plugin)
+[![Compound Engineering](https://img.shields.io/badge/Built_with-Compound_Engineering-6366f1)](https://github.com/sigu-svg/compound-engineering-plugin)
 ```
 
 Do not add model or harness attribution. A PR may span multiple agents, models, harnesses, and review passes; naming one overstates its role, while listing every participant makes the footer noisy without giving reviewers useful provenance.

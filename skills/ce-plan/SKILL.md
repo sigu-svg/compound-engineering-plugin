@@ -286,7 +286,7 @@ Fires **only in solo invocation** — when Phase 0.2 found no upstream Product C
 
 All specialist research and deepening prompts used in this phase are skill-local prompt assets under `references/agents/`. When dispatching one, read the matching file and seed a generic subagent with that prompt content plus the task-specific context below. Do not dispatch standalone agents by type/name.
 
-Model tiering lives in this caller, not in prompt assets. Local prompt files have no frontmatter. Use the platform's mid-tier model for external/organizational research prompts such as `slack-researcher` and `web-researcher` when the current harness exposes a known override; otherwise omit the override and inherit. Use inherited model for high-judgment architecture, migration, and planning-deepening prompts unless the harness has an established cheaper capable tier.
+Model tiering lives in this caller, not in prompt assets. Local prompt files have no frontmatter. Use the platform's mid-tier model for external/organizational research prompts such as `slack-researcher` and `web-researcher` when the current harness exposes a known override; otherwise omit the override and inherit. Use inherited model for high-judgment architecture, migration, and planning-deepening prompts unless the harness has an established cheaper capable tier. **Restricted-orchestrator exception:** when the installation's own instructions declare the session model orchestration-only (never to run as a subagent), never inherit it — use an explicit override (the installation's strongest allowed subagent tier for judgment roles, its mid-tier for mechanical roles), or fail closed to inline work in the orchestrator.
 
 #### 1.1 Local Research (Always Runs)
 
