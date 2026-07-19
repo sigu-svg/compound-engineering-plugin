@@ -69,7 +69,7 @@ skip() { log "$*"; exit 0; }   # non-blocking: announce reason, exit clean, no o
 # ONE editorial model/reasoning mapping per provider. Concrete IDs are the CURRENT
 # instance of the tier principle and the single maintenance point when families change.
 # Keep these in sync with ce-doc-review's script (parity-tested in CI).
-M_CODEX="gpt-5.6-sol"          # codex CLI            (-c model_reasoning_effort="medium")
+M_CODEX="gpt-5.6-sol"          # codex CLI            (-c model_reasoning_effort via route_effort)
 M_CLAUDE="opus"                # claude CLI, Opus 4.8 (--effort high)
 M_GROK="grok-4.5"              # grok CLI             (--effort high)
 M_GROK_CURSOR="cursor-grok-4.5-high"  # fixed cursor-agent Grok route (current id)
@@ -193,7 +193,7 @@ adapter_argv() {
   case "$1" in
     codex)
       printf '%s\0' codex exec - -C "$PEER_WORKDIR" --skip-git-repo-check -s read-only --json \
-        -o "$RAW_OUT" -m "$(route_model codex)" -c 'model_reasoning_effort="medium"' -c 'hide_agent_reasoning=false'
+        -o "$RAW_OUT" -m "$(route_model codex)" -c "model_reasoning_effort=\"$(route_effort codex)\"" -c 'hide_agent_reasoning=false'
       ;;
     claude)
       # Read allowed for surrounding context; mutators / shell / subagents / MCP /
@@ -565,7 +565,7 @@ attempt_route() {
   : > "$PEERLOG"; : > "$PEERERR"; rm -f "$RAW_OUT"
   build_cmd "$route"
   case "$route" in
-    codex)                  note="$(route_model "$route") (effort medium)" ;;
+    codex)                  note="$(route_model "$route") (effort $(route_effort codex))" ;;
     claude|grok-cli)        note="$(route_model "$route") (effort high)" ;;
     grok-cursor|composer)  note="$(route_model "$route")" ;;
     cursor)                note="auto (serving model unverified)" ;;
