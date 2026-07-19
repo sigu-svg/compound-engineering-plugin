@@ -29,6 +29,8 @@ All other persona subagents and CE local prompt assets use the platform's mid-ti
 
 The orchestrator (this skill) also inherits the session model; it handles intent discovery, reviewer selection, finding merge/dedup, and synthesis.
 
+**Restricted-orchestrator rule (overrides inheritance).** Some installations run the orchestrator on a model licensed for orchestration only, which must never execute as a subagent (e.g. Claude Fable 5). When the session model is such a model, never dispatch any sub-agent by inheritance: give every dispatch an explicit `model` override — the strongest allowed subagent model (Opus class) for judgment-heavy roles, the mid-tier (Sonnet class) for mechanical roles. If the harness cannot apply an explicit override, do the work inline in the orchestrator instead of dispatching (fail closed): a skipped dispatch costs a little quality; a silently inherited restricted model burns the session budget this rule exists to protect.
+
 #### Run ID
 
 Use the run ID and absolute run dir already created at the Stage 3d routing boundary. Pass `{run_id}` and `{run_dir}` to every persona sub-agent so they can write their full analysis to `{run_dir}/{reviewer_name}.json`.
