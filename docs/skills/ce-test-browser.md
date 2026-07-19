@@ -23,7 +23,7 @@
 # Test routes affected by the current branch; the user owns the dev server
 /ce-test-browser
 
-# Test a specific pull request or branch
+# Derive routes from a PR or branch already checked out locally; test its running server
 /ce-test-browser 847
 /ce-test-browser feature/new-dashboard
 
@@ -31,7 +31,7 @@
 /ce-test-browser --port 5000
 ```
 
-When no server is running, the skill stops with the correct command to start one.
+PR and branch arguments select the diff used to derive routes; they do not switch the local checkout. Check out the target code and start its server before invoking the skill. When no server is running, the skill stops with the correct command to start one.
 
 ---
 
